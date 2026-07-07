@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --v2-page-bg: #f5f7fb;
+  --v2-ink: #0b1220;
+  --v2-muted: #667085;
+  --v2-border: rgba(148, 163, 184, 0.28);
+  --v2-glass: rgba(255, 255, 255, 0.76);
+  --v2-panel-dark: #08111f;
+  --v2-green: #047857;
+  --v2-rose: #be123c;
+  --v2-amber: #b45309;
+  --v2-blue: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 34rem),
+    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.10), transparent 28rem),
+    linear-gradient(180deg, #ffffff 0%, var(--v2-page-bg) 44%, #eef2f7 100%);
+  color: var(--v2-ink);
+  overflow-x: hidden;
+  overscroll-behavior-y: auto;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+select,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+[role="button"],
+summary {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  touch-action: auto;
+}
+
+@layer components {
+  .surface {
+    @apply rounded-2xl border bg-white/80 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur-xl;
+    border-color: var(--v2-border);
+  }
+
+  .surface-dark {
+    @apply rounded-3xl text-white;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
+      radial-gradient(circle at 16% 0%, rgba(59, 130, 246, 0.20), transparent 24rem),
+      radial-gradient(circle at 98% 8%, rgba(16, 185, 129, 0.13), transparent 20rem),
+      linear-gradient(135deg, #07101e 0%, #0b1424 52%, #030712 100%);
+    background-size: 34px 34px, 34px 34px, auto, auto, auto;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      inset 0 -1px 0 rgba(15, 23, 42, 0.55),
+      0 28px 80px rgba(2, 6, 23, 0.24);
+  }
+
+  .field {
+    @apply min-h-12 w-full rounded-2xl border bg-white/90 px-3.5 py-2.5 text-base text-slate-950 outline-none transition duration-200 placeholder:text-slate-400 focus:border-slate-800 focus:ring-4 focus:ring-slate-900/10 disabled:bg-slate-100 sm:text-sm;
+    border-color: rgba(148, 163, 184, 0.38);
+  }
+
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500;
+  }
+
+  .icon-button {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/80 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10;
+  }
+
+  .primary-action {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,23,42,0.20)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+    background: linear-gradient(135deg, #07101e 0%, #0b1728 58%, #020617 100%);
+  }
+
+  .secondary-action {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .danger-action {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-semibold text-rose-700 shadow-[0_10px_24px_rgba(190,18,60,0.08)] transition duration-200 hover:-translate-y-0.5 hover:bg-rose-100 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .notice {
+    @apply surface flex gap-3 border-slate-200 bg-slate-50 p-4 text-sm text-slate-700;
+  }
+
+  .premium-card {
+    @apply rounded-3xl border bg-white/80 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl transition duration-200;
+    border-color: rgba(255, 255, 255, 0.72);
+  }
+
+  .premium-card-hover {
+    @apply hover:-translate-y-0.5 hover:shadow-[0_28px_82px_rgba(15,23,42,0.13)];
+  }
+
+  .glass-panel {
+    @apply rounded-3xl border border-white/40 bg-white/70 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl;
+  }
+
+  .finance-terminal-panel {
+    @apply rounded-3xl text-white;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
+      radial-gradient(circle at 12% -8%, rgba(59, 130, 246, 0.28), transparent 27rem),
+      radial-gradient(circle at 92% 8%, rgba(16, 185, 129, 0.15), transparent 22rem),
+      linear-gradient(135deg, #040814 0%, #0a1425 56%, #020617 100%);
+    background-size: 34px 34px, 34px 34px, auto, auto, auto;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(15, 23, 42, 0.7),
+      0 34px 96px rgba(2, 6, 23, 0.32);
+  }
+
+  .digital-drilldown-panel {
+    @apply rounded-3xl text-white;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+      radial-gradient(circle at 16% 0%, rgba(37, 99, 235, 0.16), transparent 18rem),
+      linear-gradient(135deg, var(--v2-panel-dark) 0%, #0b1424 58%, #030712 100%);
+    background-size: 28px 28px, 28px 28px, auto, auto;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 20px 55px rgba(15, 23, 42, 0.18);
+  }
+
+  .digital-glass {
+    @apply rounded-3xl backdrop-blur-xl;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.045));
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 16px 42px rgba(2, 6, 23, 0.16);
+  }
+
+  .digital-chip {
+    @apply rounded-full backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .digital-row {
+    @apply rounded-2xl;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+  }
+
+  .digital-row-soft {
+    @apply rounded-2xl;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .app-sidebar {
+    background:
+      radial-gradient(circle at 20% 0%, rgba(59, 130, 246, 0.16), transparent 18rem),
+      linear-gradient(180deg, #06101e 0%, #07111f 48%, #020617 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.13);
+    box-shadow: 22px 0 70px rgba(15, 23, 42, 0.18);
+  }
+
+  .tabular-finance {
+    @apply tabular-nums tracking-normal;
+  }
+
+  .privacy-amount {
+    position: relative;
+    display: inline-block;
+    min-width: 4.5ch;
+  }
+
+  [data-privacy-mode="on"] .privacy-amount {
+    color: transparent !important;
+    text-shadow: none !important;
+  }
+
+  [data-privacy-mode="on"] .privacy-amount::after {
+    content: "•••••";
+    position: absolute;
+    inset: 0 auto auto 0;
+    color: #475569;
+    letter-spacing: 0.12em;
+  }
+
+  [data-privacy-mode="on"] .surface-dark .privacy-amount::after,
+  [data-privacy-mode="on"] .finance-terminal-panel .privacy-amount::after,
+  [data-privacy-mode="on"] .digital-drilldown-panel .privacy-amount::after,
+  [data-privacy-mode="on"] .digital-chip .privacy-amount::after,
+  [data-privacy-mode="on"] .app-sidebar .privacy-amount::after {
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  .privacy-document-content {
+    transition:
+      filter 180ms ease,
+      opacity 180ms ease;
+  }
+
+  [data-privacy-mode="on"] .privacy-document-content {
+    filter: blur(18px) saturate(0.65) brightness(0.72);
+    opacity: 0.72;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  [data-privacy-mode="on"] .privacy-document-overlay {
+    display: flex;
+  }
+
+  [data-privacy-mode="on"] .recharts-wrapper {
+    filter: blur(10px) saturate(0.7);
+    opacity: 0.72;
+    pointer-events: none;
+    transition:
+      filter 180ms ease,
+      opacity 180ms ease;
+  }
+
+  .amount-positive {
+    color: var(--v2-green);
+  }
+
+  .amount-negative {
+    color: var(--v2-rose);
+  }
+
+  .amount-neutral {
+    @apply text-slate-700;
+  }
+
+  .apple-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .floating-action-button {
+    @apply fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_20px_45px_rgba(15,23,42,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0 lg:bottom-8 lg:right-8;
+  }
+
+  .scroll-x-stable {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    scrollbar-width: thin;
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  .scroll-y-stable {
+    @apply overflow-y-auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .activity-scroll-frame {
+    max-height: 22rem;
+  }
+
+  .metric-drilldown-scroll-frame {
+    max-height: 20rem;
+  }
+
+  .cash-ledger-mobile-cards {
+    display: block;
+  }
+
+  .cash-ledger-desktop-table {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .cash-ledger-mobile-cards {
+    display: none;
+  }
+
+  .cash-ledger-desktop-table {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  form button,
+  form a {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

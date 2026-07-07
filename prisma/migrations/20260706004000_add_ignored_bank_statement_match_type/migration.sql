@@ -1,0 +1,2 @@
+-- SQLite stores Prisma enum values as TEXT in this project.
+-- Adding BankStatementMatchType.IGNORED does not require a physical table change.

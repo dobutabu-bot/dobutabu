@@ -1,0 +1,61 @@
+name: V3 Release Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - v2-digital-kasa-release
+      - v3-*
+
+jobs:
+  release-gates:
+    name: Typecheck, lint, build, E2E and Docker smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          printf '\nAUTH_SECRET="local-development-secret-change-me-32chars"\nSESSION_SECRET="local-development-secret-change-me-32chars"\nAPP_URL="http://localhost:3006"\n' >> .env
+
+      - name: Deploy migrations and seed
+        run: |
+          npm run db:deploy
+          npm run db:seed
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Playwright release matrix
+        run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3006
+
+      - name: Docker Compose config smoke
+        run: docker compose config
+
+      - name: Docker image build smoke
+        run: docker build -t buro-finans-v3-ci .

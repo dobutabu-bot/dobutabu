@@ -1,0 +1,5 @@
+-- SQLite stores Prisma enum values as text, so adding
+-- BankStatementMatchType.AUTO_MATCHED and MANUALLY_MATCHED
+-- does not require a physical table change.
+-- Production databases with native enum support should apply the
+-- equivalent enum ALTER through Prisma migrate deploy.

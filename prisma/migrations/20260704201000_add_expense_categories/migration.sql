@@ -1,0 +1,2 @@
+-- SQLite stores Prisma enum values as text in this schema.
+-- ACCOMMODATION and MEAL are application-level enum additions, so no table rewrite is required.

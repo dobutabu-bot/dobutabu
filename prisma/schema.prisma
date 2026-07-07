@@ -1,0 +1,1113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum CaseStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CREDIT_CARD
+  OTHER
+}
+
+enum IncomeCategory {
+  LEGAL_FEE
+  ADVANCE
+  EXPENSE_REIMBURSEMENT
+  OTHER
+}
+
+enum ExpenseCategory {
+  COURT_FEE
+  NOTARY
+  TRAVEL
+  ACCOMMODATION
+  OFFICE
+  TAX
+  PERSONNEL
+  MEAL
+  OTHER
+}
+
+enum InvoiceOrReceiptType {
+  E_SMM
+  INVOICE
+  ARCHIVE_INVOICE
+  OTHER
+}
+
+enum InvoiceOrReceiptStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+  PAID
+  UNPAID
+}
+
+enum TaskReminderStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum ReminderType {
+  GENERAL
+  EXPENSE
+  COLLECTION
+  CASE
+  INVOICE
+  TAX
+}
+
+enum ReminderPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum AuditEntityType {
+  CLIENT
+  CASE_FILE
+  INCOME
+  EXPENSE
+  INVOICE_OR_RECEIPT
+  TASK_REMINDER
+  SETTING
+  CASH_ACCOUNT
+  CASH_LEDGER_ENTRY
+  CASH_TRANSFER
+  BALANCE_SNAPSHOT
+  ASSET_ACCOUNT
+  ASSET_VALUATION
+  ASSET_TRANSACTION
+  CAPITAL_SNAPSHOT
+  CAPITAL_IMPORT
+  CAPITAL_IMPORT_SUGGESTION
+  DOCUMENT
+  BANK_STATEMENT_IMPORT
+  BANK_STATEMENT_ROW
+  TRANSACTION_CATEGORY
+  TRANSACTION_RULE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  ARCHIVE
+  CANCEL
+  VALUE_UPDATE
+}
+
+enum CashAccountType {
+  CASH
+  BANK
+  CREDIT_CARD
+  VIRTUAL
+  OTHER
+}
+
+enum CashLedgerDirection {
+  IN
+  OUT
+}
+
+enum CashLedgerEntryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+  OPENING_BALANCE
+}
+
+enum DocumentType {
+  RECEIPT
+  BANK_RECEIPT
+  INVOICE
+  EXPENSE_RECEIPT
+  CONTRACT
+  BANK_STATEMENT
+  TAX_DOCUMENT
+  OTHER
+}
+
+enum DocumentExtractionStatus {
+  NOT_PROCESSED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum BankStatementSourceType {
+  CSV
+  XLSX
+  PDF
+}
+
+enum BankStatementImportStatus {
+  IMPORTED
+  FAILED
+}
+
+enum BankStatementRowStatus {
+  SUCCESS
+  ERROR
+  DUPLICATE
+}
+
+enum BankStatementDirection {
+  IN
+  OUT
+  NEUTRAL
+}
+
+enum BankStatementMatchType {
+  NONE
+  SUGGESTED
+  MATCHED
+  AUTO_MATCHED
+  MANUALLY_MATCHED
+  CREATED_FROM_BANK
+  IGNORED
+}
+
+enum AssetType {
+  CASH
+  BANK
+  FX
+  GOLD
+  STOCK
+  CRYPTO
+  FUND
+  REAL_ESTATE
+  VEHICLE
+  RECEIVABLE
+  DEBT
+  OTHER
+}
+
+enum AssetValuationSource {
+  MANUAL
+  IMPORTED
+  SYSTEM
+}
+
+enum AssetTransactionType {
+  BUY
+  SELL
+  DEPOSIT
+  WITHDRAW
+  VALUE_UPDATE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum CapitalImportType {
+  BANK_STATEMENT
+  FX_STATEMENT
+  GOLD_STATEMENT
+  STOCK_PORTFOLIO
+  CRYPTO_PORTFOLIO
+  OTHER_FINANCIAL_DOCUMENT
+  MANUAL_ENTRY
+}
+
+enum CapitalImportStatus {
+  PREVIEWED
+  CONFIRMED
+  CANCELLED
+}
+
+enum CapitalImportSuggestionStatus {
+  SUGGESTED
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id                    String                    @id @default(cuid())
+  name                  String
+  email                 String                    @unique
+  passwordHash          String
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  clients               Client[]
+  caseFiles             CaseFile[]
+  incomes               Income[]
+  expenses              Expense[]
+  documents             InvoiceOrReceipt[]
+  reminders             TaskReminder[]
+  settings              AppSetting[]
+  auditLogs             AuditLog[]
+  cashAccounts          CashAccount[]
+  cashEntries           CashLedgerEntry[]
+  cashTransfers         CashTransfer[]
+  balanceSnapshots      BalanceSnapshot[]
+  uploadedDocuments     Document[]
+  documentTags          DocumentTag[]
+  documentLogs          DocumentProcessingLog[]
+  bankStatementImports  BankStatementImport[]
+  bankStatementRows     BankStatementRow[]
+  bankImportMappings    BankImportMapping[]
+  transactionCategories TransactionCategory[]
+  transactionRules      TransactionRule[]
+  assetAccounts         AssetAccount[]
+  assetValuations       AssetValuation[]
+  assetTransactions     AssetTransaction[]
+  capitalSnapshots      CapitalSnapshot[]
+  capitalImports        CapitalImport[]
+  capitalSuggestions    CapitalImportSuggestion[]
+}
+
+model Client {
+  id                       String             @id @default(cuid())
+  userId                   String
+  name                     String
+  type                     ClientType         @default(INDIVIDUAL)
+  tcNo                     String?
+  taxNo                    String?
+  phone                    String?
+  email                    String?
+  address                  String?
+  notes                    String?
+  archivedAt               DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cases                    CaseFile[]
+  incomes                  Income[]
+  expenses                 Expense[]
+  documents                InvoiceOrReceipt[]
+  reminders                TaskReminder[]
+  cashEntries              CashLedgerEntry[]
+  linkedDocuments          Document[]         @relation("DocumentLinkedClient")
+  bankStatementSuggestions BankStatementRow[]
+  transactionRules         TransactionRule[]
+
+  @@index([userId])
+  @@index([name])
+  @@index([type])
+  @@index([archivedAt])
+  @@index([deletedAt])
+}
+
+model CaseFile {
+  id                       String             @id @default(cuid())
+  userId                   String
+  clientId                 String
+  title                    String
+  courtOrOffice            String?
+  fileNumber               String?
+  caseType                 String?
+  status                   CaseStatus         @default(ACTIVE)
+  notes                    String?
+  archivedAt               DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client                   Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  incomes                  Income[]
+  expenses                 Expense[]
+  documents                InvoiceOrReceipt[]
+  taskReminders            TaskReminder[]
+  cashEntries              CashLedgerEntry[]
+  linkedDocuments          Document[]         @relation("DocumentLinkedCaseFile")
+  bankStatementSuggestions BankStatementRow[]
+  transactionRules         TransactionRule[]
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([fileNumber])
+  @@index([archivedAt])
+  @@index([deletedAt])
+}
+
+model Income {
+  id                       String             @id @default(cuid())
+  userId                   String
+  clientId                 String
+  caseFileId               String?
+  amount                   Decimal
+  currency                 String             @default("TRY")
+  date                     DateTime
+  paymentMethod            PaymentMethod      @default(BANK_TRANSFER)
+  category                 IncomeCategory     @default(LEGAL_FEE)
+  description              String?
+  receiptIssued            Boolean            @default(false)
+  receiptNumber            String?
+  cashAccountId            String?
+  documentNotRequired      Boolean            @default(false)
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client                   Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  caseFile                 CaseFile?          @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  cashAccount              CashAccount?       @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+  linkedDocuments          InvoiceOrReceipt[] @relation("ReceiptIncomeLink")
+  cashEntries              CashLedgerEntry[]
+  attachedDocuments        Document[]         @relation("DocumentLinkedIncome")
+  matchedBankStatementRows BankStatementRow[]
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([cashAccountId])
+  @@index([date])
+  @@index([category])
+  @@index([deletedAt])
+}
+
+model Expense {
+  id                       String             @id @default(cuid())
+  userId                   String
+  clientId                 String?
+  caseFileId               String?
+  amount                   Decimal
+  currency                 String             @default("TRY")
+  date                     DateTime
+  paymentMethod            PaymentMethod      @default(BANK_TRANSFER)
+  category                 ExpenseCategory    @default(OTHER)
+  isClientExpense          Boolean            @default(false)
+  description              String?
+  cashAccountId            String?
+  documentNotRequired      Boolean            @default(false)
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client                   Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  caseFile                 CaseFile?          @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  cashAccount              CashAccount?       @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+  cashEntries              CashLedgerEntry[]
+  attachedDocuments        Document[]         @relation("DocumentLinkedExpense")
+  matchedBankStatementRows BankStatementRow[]
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([cashAccountId])
+  @@index([date])
+  @@index([category])
+  @@index([isClientExpense])
+  @@index([deletedAt])
+}
+
+model InvoiceOrReceipt {
+  id                  String                 @id @default(cuid())
+  userId              String
+  clientId            String
+  caseFileId          String?
+  relatedIncomeId     String?
+  type                InvoiceOrReceiptType   @default(E_SMM)
+  number              String
+  issueDate           DateTime
+  grossAmount         Decimal
+  vatAmount           Decimal?
+  withholdingAmount   Decimal?
+  netAmount           Decimal
+  status              InvoiceOrReceiptStatus @default(DRAFT)
+  notes               String?
+  documentNotRequired Boolean                @default(false)
+  deletedAt           DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client              Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  caseFile            CaseFile?              @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  relatedIncome       Income?                @relation("ReceiptIncomeLink", fields: [relatedIncomeId], references: [id], onDelete: SetNull)
+  cashEntries         CashLedgerEntry[]
+  attachedDocuments   Document[]             @relation("DocumentLinkedInvoiceOrReceipt")
+
+  @@unique([userId, type, number])
+  @@index([userId])
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([relatedIncomeId])
+  @@index([issueDate])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model CashAccount {
+  id                   String                @id @default(cuid())
+  userId               String
+  name                 String
+  type                 CashAccountType       @default(CASH)
+  currency             String                @default("TRY")
+  openingBalance       Decimal               @default(0)
+  description          String?
+  color                String?
+  icon                 String?
+  isDefault            Boolean               @default(false)
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomes              Income[]
+  expenses             Expense[]
+  taskReminders        TaskReminder[]
+  ledgerEntries        CashLedgerEntry[]
+  fromTransfers        CashTransfer[]        @relation("CashTransferFrom")
+  toTransfers          CashTransfer[]        @relation("CashTransferTo")
+  snapshots            BalanceSnapshot[]
+  bankStatementImports BankStatementImport[]
+  bankStatementRows    BankStatementRow[]
+  bankImportMappings   BankImportMapping[]
+  linkedAssetAccounts  AssetAccount[]
+  transactionRules     TransactionRule[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([isDefault])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model CashLedgerEntry {
+  id                       String              @id @default(cuid())
+  userId                   String
+  cashAccountId            String
+  direction                CashLedgerDirection
+  entryType                CashLedgerEntryType
+  amount                   Decimal
+  currency                 String              @default("TRY")
+  date                     DateTime
+  description              String?
+  referenceNo              String?
+  incomeId                 String?             @unique
+  expenseId                String?             @unique
+  invoiceOrReceiptId       String?
+  clientId                 String?
+  caseFileId               String?
+  documentNotRequired      Boolean             @default(false)
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  deletedAt                DateTime?
+  user                     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashAccount              CashAccount         @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
+  income                   Income?             @relation(fields: [incomeId], references: [id], onDelete: SetNull)
+  expense                  Expense?            @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  invoiceOrReceipt         InvoiceOrReceipt?   @relation(fields: [invoiceOrReceiptId], references: [id], onDelete: SetNull)
+  client                   Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  caseFile                 CaseFile?           @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  attachedDocuments        Document[]          @relation("DocumentLinkedCashLedgerEntry")
+  matchedBankStatementRows BankStatementRow[]
+  assetTransactions        AssetTransaction[]
+
+  @@index([userId])
+  @@index([cashAccountId])
+  @@index([direction])
+  @@index([entryType])
+  @@index([date])
+  @@index([invoiceOrReceiptId])
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([deletedAt])
+}
+
+model CashTransfer {
+  id            String      @id @default(cuid())
+  userId        String
+  fromAccountId String
+  toAccountId   String
+  amount        Decimal
+  currency      String      @default("TRY")
+  date          DateTime
+  description   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAccount   CashAccount @relation("CashTransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount     CashAccount @relation("CashTransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([date])
+  @@index([deletedAt])
+}
+
+model BalanceSnapshot {
+  id            String      @id @default(cuid())
+  userId        String
+  cashAccountId String
+  date          DateTime
+  balance       Decimal
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashAccount   CashAccount @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([cashAccountId, date])
+  @@index([userId])
+  @@index([cashAccountId])
+  @@index([date])
+}
+
+model TaskReminder {
+  id                  String             @id @default(cuid())
+  userId              String
+  title               String
+  description         String?
+  dueDate             DateTime
+  reminderType        ReminderType       @default(GENERAL)
+  amount              Decimal?
+  currency            String             @default("TRY")
+  cashAccountId       String?
+  relatedClientId     String?
+  relatedCaseFileId   String?
+  status              TaskReminderStatus @default(OPEN)
+  priority            ReminderPriority   @default(NORMAL)
+  notifyBeforeDays    Int                @default(3)
+  notificationEnabled Boolean            @default(true)
+  notifiedAt          DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashAccount         CashAccount?       @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+  relatedClient       Client?            @relation(fields: [relatedClientId], references: [id], onDelete: SetNull)
+  relatedCaseFile     CaseFile?          @relation(fields: [relatedCaseFileId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([cashAccountId])
+  @@index([relatedClientId])
+  @@index([relatedCaseFileId])
+  @@index([dueDate])
+  @@index([status])
+  @@index([reminderType])
+  @@index([priority])
+  @@index([notificationEnabled])
+  @@index([deletedAt])
+}
+
+model AppSetting {
+  id     String @id @default(cuid())
+  userId String
+  key    String
+  value  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String          @id @default(cuid())
+  entityType AuditEntityType
+  entityId   String
+  action     AuditAction
+  oldValue   Json?
+  newValue   Json?
+  message    String?
+  userId     String?
+  createdAt  DateTime        @default(now())
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Document {
+  id                       String                   @id @default(cuid())
+  userId                   String
+  title                    String
+  description              String?
+  documentType             DocumentType
+  fileName                 String
+  originalFileName         String
+  mimeType                 String
+  fileSize                 Int
+  storagePath              String
+  fileHash                 String
+  uploadedAt               DateTime                 @default(now())
+  documentDate             DateTime?
+  amount                   Decimal?
+  currency                 String                   @default("TRY")
+  extractedText            String?
+  extractionStatus         DocumentExtractionStatus @default(NOT_PROCESSED)
+  linkedClientId           String?
+  linkedCaseFileId         String?
+  linkedIncomeId           String?
+  linkedExpenseId          String?
+  linkedInvoiceOrReceiptId String?
+  linkedCashLedgerEntryId  String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  deletedAt                DateTime?
+  user                     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedClient             Client?                  @relation("DocumentLinkedClient", fields: [linkedClientId], references: [id], onDelete: SetNull)
+  linkedCaseFile           CaseFile?                @relation("DocumentLinkedCaseFile", fields: [linkedCaseFileId], references: [id], onDelete: SetNull)
+  linkedIncome             Income?                  @relation("DocumentLinkedIncome", fields: [linkedIncomeId], references: [id], onDelete: SetNull)
+  linkedExpense            Expense?                 @relation("DocumentLinkedExpense", fields: [linkedExpenseId], references: [id], onDelete: SetNull)
+  linkedInvoiceOrReceipt   InvoiceOrReceipt?        @relation("DocumentLinkedInvoiceOrReceipt", fields: [linkedInvoiceOrReceiptId], references: [id], onDelete: SetNull)
+  linkedCashLedgerEntry    CashLedgerEntry?         @relation("DocumentLinkedCashLedgerEntry", fields: [linkedCashLedgerEntryId], references: [id], onDelete: SetNull)
+  tags                     DocumentTagOnDocument[]
+  processingLogs           DocumentProcessingLog[]
+  bankStatementImports     BankStatementImport[]
+  capitalImports           CapitalImport[]
+  sourcedAssetAccounts     AssetAccount[]
+  sourcedAssetValuations   AssetValuation[]
+
+  @@index([userId])
+  @@index([documentType])
+  @@index([fileHash])
+  @@index([userId, fileHash])
+  @@index([uploadedAt])
+  @@index([documentDate])
+  @@index([linkedClientId])
+  @@index([linkedCaseFileId])
+  @@index([linkedIncomeId])
+  @@index([linkedExpenseId])
+  @@index([linkedInvoiceOrReceiptId])
+  @@index([linkedCashLedgerEntryId])
+  @@index([extractionStatus])
+  @@index([deletedAt])
+}
+
+model BankStatementImport {
+  id                String                    @id @default(cuid())
+  userId            String
+  documentId        String?
+  cashAccountId     String?
+  bankName          String
+  sourceType        BankStatementSourceType
+  status            BankStatementImportStatus @default(IMPORTED)
+  currency          String                    @default("TRY")
+  fileName          String
+  originalFileName  String
+  mimeType          String
+  fileSize          Int
+  storagePath       String
+  fileHash          String
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  detectedColumns   Json?
+  columnMapping     Json?
+  dateFormat        String?
+  decimalSeparator  String?
+  thousandSeparator String?
+  totalRows         Int                       @default(0)
+  successfulRows    Int                       @default(0)
+  failedRows        Int                       @default(0)
+  duplicateRows     Int                       @default(0)
+  openingBalance    Decimal?
+  closingBalance    Decimal?
+  notes             String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  deletedAt         DateTime?
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document          Document?                 @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  cashAccount       CashAccount?              @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+  rows              BankStatementRow[]
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([cashAccountId])
+  @@index([bankName])
+  @@index([sourceType])
+  @@index([status])
+  @@index([fileHash])
+  @@index([periodStart])
+  @@index([periodEnd])
+  @@index([deletedAt])
+}
+
+model BankStatementRow {
+  id                       String                 @id @default(cuid())
+  userId                   String
+  importId                 String
+  cashAccountId            String?
+  rowNumber                Int
+  transactionDate          DateTime?
+  description              String
+  debitAmount              Decimal?
+  creditAmount             Decimal?
+  amount                   Decimal?
+  balance                  Decimal?
+  currency                 String                 @default("TRY")
+  direction                BankStatementDirection @default(NEUTRAL)
+  status                   BankStatementRowStatus @default(SUCCESS)
+  errorMessage             String?
+  rawData                  Json?
+  rawHash                  String
+  categorySuggestion       String?
+  clientSuggestionId       String?
+  caseFileSuggestionId     String?
+  matchType                BankStatementMatchType @default(NONE)
+  matchedIncomeId          String?
+  matchedExpenseId         String?
+  matchedCashLedgerEntryId String?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  deletedAt                DateTime?
+  user                     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  import                   BankStatementImport    @relation(fields: [importId], references: [id], onDelete: Cascade)
+  cashAccount              CashAccount?           @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+  clientSuggestion         Client?                @relation(fields: [clientSuggestionId], references: [id], onDelete: SetNull)
+  caseFileSuggestion       CaseFile?              @relation(fields: [caseFileSuggestionId], references: [id], onDelete: SetNull)
+  matchedIncome            Income?                @relation(fields: [matchedIncomeId], references: [id], onDelete: SetNull)
+  matchedExpense           Expense?               @relation(fields: [matchedExpenseId], references: [id], onDelete: SetNull)
+  matchedCashLedgerEntry   CashLedgerEntry?       @relation(fields: [matchedCashLedgerEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, rawHash])
+  @@index([importId])
+  @@index([cashAccountId])
+  @@index([rowNumber])
+  @@index([transactionDate])
+  @@index([direction])
+  @@index([status])
+  @@index([clientSuggestionId])
+  @@index([caseFileSuggestionId])
+  @@index([matchedIncomeId])
+  @@index([matchedExpenseId])
+  @@index([matchedCashLedgerEntryId])
+  @@index([deletedAt])
+}
+
+model BankImportMapping {
+  id                 String                  @id @default(cuid())
+  userId             String
+  bankName           String
+  bankNameKey        String
+  sourceType         BankStatementSourceType
+  cashAccountId      String?
+  columnsFingerprint String
+  detectedColumns    Json?
+  columnMapping      Json
+  dateFormat         String?
+  decimalSeparator   String?
+  thousandSeparator  String?
+  usageCount         Int                     @default(0)
+  lastUsedAt         DateTime?
+  isActive           Boolean                 @default(true)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  deletedAt          DateTime?
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashAccount        CashAccount?            @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, bankNameKey, sourceType, columnsFingerprint])
+  @@index([userId])
+  @@index([bankNameKey])
+  @@index([sourceType])
+  @@index([cashAccountId])
+  @@index([columnsFingerprint])
+  @@index([isActive])
+  @@index([lastUsedAt])
+  @@index([deletedAt])
+}
+
+model TransactionCategory {
+  id          String                 @id @default(cuid())
+  userId      String
+  name        String
+  slug        String
+  group       String                 @default("OTHER")
+  direction   BankStatementDirection @default(NEUTRAL)
+  color       String?
+  icon        String?
+  description String?
+  isSystem    Boolean                @default(false)
+  isActive    Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime?              @updatedAt
+  deletedAt   DateTime?
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slug])
+  @@index([userId])
+  @@index([group])
+  @@index([direction])
+  @@index([isSystem])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model TransactionRule {
+  id            String       @id @default(cuid())
+  userId        String
+  name          String
+  keyword       String
+  matchType     String       @default("DESCRIPTION_CONTAINS")
+  direction     String       @default("ANY")
+  category      String
+  targetGroup   String?
+  amountMin     Decimal?
+  amountMax     Decimal?
+  priority      Int          @default(100)
+  confidence    Decimal      @default(0.9)
+  clientId      String?
+  caseFileId    String?
+  cashAccountId String?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client        Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  caseFile      CaseFile?    @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  cashAccount   CashAccount? @relation(fields: [cashAccountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([matchType])
+  @@index([direction])
+  @@index([category])
+  @@index([priority])
+  @@index([isActive])
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([cashAccountId])
+  @@index([deletedAt])
+}
+
+model AssetAccount {
+  id                  String             @id @default(cuid())
+  userId              String
+  name                String
+  assetType           AssetType
+  currency            String?
+  symbol              String?
+  quantity            Decimal?
+  unitPrice           Decimal?
+  manualTotalValue    Decimal?
+  valuationCurrency   String             @default("TRY")
+  linkedCashAccountId String?
+  sourceDocumentId    String?
+  capitalImportId     String?
+  description         String?
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  deletedAt           DateTime?
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedCashAccount   CashAccount?       @relation(fields: [linkedCashAccountId], references: [id], onDelete: SetNull)
+  sourceDocument      Document?          @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  capitalImport       CapitalImport?     @relation(fields: [capitalImportId], references: [id], onDelete: SetNull)
+  valuations          AssetValuation[]
+  transactions        AssetTransaction[]
+
+  @@index([userId])
+  @@index([assetType])
+  @@index([symbol])
+  @@index([valuationCurrency])
+  @@index([linkedCashAccountId])
+  @@index([sourceDocumentId])
+  @@index([capitalImportId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model AssetValuation {
+  id                String               @id @default(cuid())
+  userId            String
+  assetAccountId    String
+  valuationDate     DateTime
+  quantity          Decimal?
+  unitPrice         Decimal?
+  totalValue        Decimal
+  valuationCurrency String               @default("TRY")
+  source            AssetValuationSource @default(MANUAL)
+  sourceDocumentId  String?
+  capitalImportId   String?
+  note              String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime?            @updatedAt
+  deletedAt         DateTime?
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetAccount      AssetAccount         @relation(fields: [assetAccountId], references: [id], onDelete: Cascade)
+  sourceDocument    Document?            @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  capitalImport     CapitalImport?       @relation(fields: [capitalImportId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([assetAccountId])
+  @@index([valuationDate])
+  @@index([valuationCurrency])
+  @@index([source])
+  @@index([sourceDocumentId])
+  @@index([capitalImportId])
+  @@index([deletedAt])
+}
+
+model AssetTransaction {
+  id                      String               @id @default(cuid())
+  userId                  String
+  assetAccountId          String
+  transactionType         AssetTransactionType
+  date                    DateTime
+  quantity                Decimal?
+  unitPrice               Decimal?
+  totalAmount             Decimal
+  currency                String               @default("TRY")
+  description             String?
+  linkedCashLedgerEntryId String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  deletedAt               DateTime?
+  user                    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetAccount            AssetAccount         @relation(fields: [assetAccountId], references: [id], onDelete: Cascade)
+  linkedCashLedgerEntry   CashLedgerEntry?     @relation(fields: [linkedCashLedgerEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([assetAccountId])
+  @@index([transactionType])
+  @@index([date])
+  @@index([currency])
+  @@index([linkedCashLedgerEntryId])
+  @@index([deletedAt])
+}
+
+model CapitalSnapshot {
+  id           String    @id @default(cuid())
+  userId       String
+  snapshotDate DateTime
+  totalAssets  Decimal
+  totalDebts   Decimal
+  netWorth     Decimal
+  currency     String    @default("TRY")
+  breakdown    Json
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  deletedAt    DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([snapshotDate])
+  @@index([currency])
+  @@index([deletedAt])
+}
+
+model CapitalImport {
+  id               String                    @id @default(cuid())
+  userId           String
+  documentId       String?
+  importType       CapitalImportType
+  status           CapitalImportStatus       @default(PREVIEWED)
+  originalFileName String?
+  fileName         String?
+  mimeType         String?
+  fileSize         Int?
+  storagePath      String?
+  fileHash         String?
+  columns          Json?
+  previewRows      Json?
+  acceptedCount    Int                       @default(0)
+  rejectedCount    Int                       @default(0)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  deletedAt        DateTime?
+  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document         Document?                 @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  suggestions      CapitalImportSuggestion[]
+  assetAccounts    AssetAccount[]
+  assetValuations  AssetValuation[]
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([importType])
+  @@index([status])
+  @@index([fileHash])
+  @@index([deletedAt])
+}
+
+model CapitalImportSuggestion {
+  id                String                        @id @default(cuid())
+  userId            String
+  capitalImportId   String
+  rowNumber         Int?
+  assetType         AssetType
+  name              String
+  symbol            String?
+  currency          String?
+  quantity          Decimal?
+  unitPrice         Decimal?
+  totalValue        Decimal
+  valuationCurrency String                        @default("TRY")
+  confidence        Decimal                       @default(0.5)
+  status            CapitalImportSuggestionStatus @default(SUGGESTED)
+  note              String?
+  rawData           Json?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  user              User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capitalImport     CapitalImport                 @relation(fields: [capitalImportId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([capitalImportId])
+  @@index([assetType])
+  @@index([status])
+  @@index([confidence])
+}
+
+model DocumentTag {
+  id        String                  @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime?               @updatedAt
+  deletedAt DateTime?
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents DocumentTagOnDocument[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([name])
+  @@index([deletedAt])
+}
+
+model DocumentTagOnDocument {
+  documentId String
+  tagId      String
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        DocumentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
+  @@index([tagId])
+}
+
+model DocumentProcessingLog {
+  id         String                   @id @default(cuid())
+  userId     String
+  documentId String
+  status     DocumentExtractionStatus
+  message    String?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime?                @updatedAt
+  deletedAt  DateTime?
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document                 @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+}

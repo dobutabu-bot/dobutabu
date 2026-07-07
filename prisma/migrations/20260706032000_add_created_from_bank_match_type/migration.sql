@@ -1,0 +1,2 @@
+-- SQLite stores Prisma enum values as text, so adding BankStatementMatchType.CREATED_FROM_BANK
+-- does not require a physical table alteration. This migration records the schema intent.
