@@ -1,5 +1,5 @@
 import type { DocumentExtractionStatus } from "@prisma/client";
-import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
 import path from "node:path";
 
 import { readPrivateDocumentFile } from "@/lib/document-storage";
@@ -17,7 +17,8 @@ export type DocumentTextExtractionResult = {
 };
 
 const maxExtractedTextLength = 120_000;
-const requirePdfParse = createRequire(import.meta.url);
+const maxPdfWorkerOutputBytes = 140_000;
+const pdfWorkerTimeoutMs = 15_000;
 
 const textLikeMimeTypes = new Set([
   "text/plain",
@@ -67,23 +68,8 @@ export function isTextLikeDocument(document: Pick<ExtractableDocument, "mimeType
 }
 
 export async function extractPdfTextLayer(buffer: Buffer): Promise<DocumentTextExtractionResult> {
-  let parser: { getText: (params?: { pageJoiner?: string }) => Promise<{ text?: string }>; destroy: () => Promise<void> } | null = null;
-
   try {
-    const { PDFParse } = requirePdfParse("pdf-parse") as {
-      PDFParse: {
-        new (input: { data: Buffer }): {
-          getText: (params?: { pageJoiner?: string }) => Promise<{ text?: string }>;
-          destroy: () => Promise<void>;
-        };
-        setWorker?: (workerSrc?: string) => string;
-      };
-    };
-
-    PDFParse.setWorker?.(path.join(process.cwd(), "node_modules/pdf-parse/dist/pdf-parse/cjs/pdf.worker.mjs"));
-    parser = new PDFParse({ data: buffer });
-    const parsed = await parser.getText({ pageJoiner: "\n\n" });
-    const text = normalizeExtractedText(parsed.text ?? "");
+    const text = normalizeExtractedText(await extractPdfTextInWorker(buffer));
 
     if (!text) {
       return {
@@ -104,9 +90,76 @@ export async function extractPdfTextLayer(buffer: Buffer): Promise<DocumentTextE
       text: null,
       message: "PDF metni çıkarılamadı. Belge kaydı korundu; manuel metadata girilebilir."
     };
-  } finally {
-    await parser?.destroy().catch(() => undefined);
   }
+}
+
+async function extractPdfTextInWorker(buffer: Buffer): Promise<string> {
+  const workerPath = path.join(process.cwd(), "src/lib/documents/pdf-text-worker.cjs");
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [workerPath], {
+      cwd: process.cwd(),
+      env: { ...process.env, NODE_OPTIONS: "" },
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    let settled = false;
+    const timeout = setTimeout(() => {
+      settle(new Error("PDF text worker timed out"));
+      child.kill("SIGKILL");
+    }, pdfWorkerTimeoutMs);
+
+    function settle(error: Error | null, value = "") {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve(value);
+      }
+    }
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      if (Buffer.concat(stdoutChunks).length < maxPdfWorkerOutputBytes) {
+        stdoutChunks.push(chunk);
+      }
+    });
+
+    child.stderr.on("data", (chunk: Buffer) => {
+      if (Buffer.concat(stderrChunks).length < 8_000) {
+        stderrChunks.push(chunk);
+      }
+    });
+
+    child.on("error", (error) => settle(error));
+    child.stdin.on("error", (error) => settle(error));
+    child.on("close", (code) => {
+      if (settled) {
+        return;
+      }
+
+      if (code !== 0) {
+        const message = Buffer.concat(stderrChunks).toString("utf8").trim() || `PDF text worker exited with ${code}`;
+        settle(new Error(message));
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(Buffer.concat(stdoutChunks).toString("utf8")) as { text?: string };
+        settle(null, payload.text ?? "");
+      } catch {
+        settle(new Error("PDF text worker returned invalid output"));
+      }
+    });
+
+    child.stdin.end(buffer);
+  });
 }
 
 export async function extractTextLikeContent(buffer: Buffer): Promise<DocumentTextExtractionResult> {

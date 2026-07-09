@@ -20,6 +20,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  max-width: 100%;
+}
+
 html {
   min-height: 100%;
   -webkit-text-size-adjust: 100%;
@@ -64,6 +69,23 @@ textarea {
   touch-action: auto;
 }
 
+main,
+section,
+article,
+aside,
+header,
+footer,
+nav {
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
 @layer components {
   .surface {
     @apply rounded-2xl border bg-white/80 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur-xl;
@@ -100,16 +122,16 @@ textarea {
   }
 
   .primary-action {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,23,42,0.20)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,23,42,0.20)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:opacity-60;
     background: linear-gradient(135deg, #07101e 0%, #0b1728 58%, #020617 100%);
   }
 
   .secondary-action {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .danger-action {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-semibold text-rose-700 shadow-[0_10px_24px_rgba(190,18,60,0.08)] transition duration-200 hover:-translate-y-0.5 hover:bg-rose-100 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-semibold text-rose-700 shadow-[0_10px_24px_rgba(190,18,60,0.08)] transition duration-200 hover:-translate-y-0.5 hover:bg-rose-100 active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .notice {
@@ -253,15 +275,17 @@ textarea {
   }
 
   .amount-positive {
+    @apply tabular-nums tracking-normal;
     color: var(--v2-green);
   }
 
   .amount-negative {
+    @apply tabular-nums tracking-normal;
     color: var(--v2-rose);
   }
 
   .amount-neutral {
-    @apply text-slate-700;
+    @apply tabular-nums tracking-normal text-slate-700;
   }
 
   .apple-button {
@@ -319,6 +343,14 @@ textarea {
   form button,
   form a {
     min-height: 44px;
+  }
+
+  .surface,
+  .premium-card,
+  .glass-panel,
+  .finance-terminal-panel,
+  .surface-dark {
+    max-width: 100%;
   }
 }
 

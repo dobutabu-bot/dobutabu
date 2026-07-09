@@ -10,6 +10,7 @@ import {
 } from "@/lib/bank-analysis/categorize-transaction";
 import {
   findUnmatchedSystemMovements,
+  isAmbiguousLedgerSuggestion,
   suggestLedgerMatch,
   type LedgerMovementForMatch
 } from "@/lib/bank-analysis/reconciliation";
@@ -86,17 +87,21 @@ export type LargeTransactionItem = {
 
 export type RecurringTransactionItem = {
   key: string;
+  name: string;
   label: string;
   direction: TransactionDirection;
   category: string;
   count: number;
   distinctMonths: number;
   averageAmount: number;
+  total: number;
   totalAmount: number;
   averageIntervalDays: number | null;
   firstDate: string | null;
   lastDate: string | null;
   nextExpectedDate: string | null;
+  frequency: "MONTHLY" | "REGULAR" | "IRREGULAR";
+  confidence: number;
 };
 
 export async function getStatementSummary(importId: string, userId?: string) {
@@ -133,20 +138,7 @@ export async function categorizeStatementRows(importId: string, userId?: string)
 
 export async function detectRecurringTransactions(importId: string, userId?: string) {
   const rows = await categorizeStatementRows(importId, userId);
-  const successfulRows = rows.filter((row) => row.date && row.direction !== "NEUTRAL" && row.group !== "TRANSFER");
-  const grouped = new Map<string, CategorizedStatementRow[]>();
-
-  for (const row of successfulRows) {
-    const key = recurringKey(row);
-    const bucket = grouped.get(key) ?? [];
-    bucket.push(row);
-    grouped.set(key, bucket);
-  }
-
-  const recurring = [...grouped.entries()]
-    .map(([key, groupRows]) => buildRecurringItem(key, groupRows))
-    .filter((item): item is RecurringTransactionItem => item != null)
-    .sort((a, b) => b.totalAmount - a.totalAmount);
+  const recurring = buildRecurringItems(rows);
 
   return {
     income: recurring.filter((item) => item.direction === "IN").slice(0, 20),
@@ -661,19 +653,7 @@ async function getRowsForScreenScope(userId: string, importId?: string | null) {
 }
 
 function buildRecurringFromCategorizedRows(rows: CategorizedStatementRow[]) {
-  const grouped = new Map<string, CategorizedStatementRow[]>();
-
-  for (const row of rows.filter((item) => item.date && item.direction !== "NEUTRAL" && item.group !== "TRANSFER")) {
-    const key = recurringKey(row);
-    const bucket = grouped.get(key) ?? [];
-    bucket.push(row);
-    grouped.set(key, bucket);
-  }
-
-  const recurring = [...grouped.entries()]
-    .map(([key, groupRows]) => buildRecurringItem(key, groupRows))
-    .filter((item): item is RecurringTransactionItem => item != null)
-    .sort((a, b) => b.totalAmount - a.totalAmount);
+  const recurring = buildRecurringItems(rows);
 
   return {
     income: recurring.filter((item) => item.direction === "IN").slice(0, 20),
@@ -758,8 +738,39 @@ function buildLedgerMatchSummary(bankRows: ReturnType<typeof toBankMovementForMa
     matchedRows: bankRows.filter(isApprovedBankMatch).length,
     suggestedMatches: suggestedMatches.slice(0, 100),
     unmatchedBankRows: unmatchedBankRows.slice(0, 100),
-    unmatchedSystemMovements: findUnmatchedSystemMovements(bankRows, ledgerEntries)
+    unmatchedSystemMovements: buildUnmatchedSystemMovements(bankRows, ledgerEntries, suggestedMatches)
   };
+}
+
+function buildUnmatchedSystemMovements(
+  bankRows: ReturnType<typeof toBankMovementForMatch>[],
+  ledgerEntries: LedgerMovementForMatch[],
+  suggestedMatches: NonNullable<ReturnType<typeof suggestLedgerMatch>>[],
+  limit = 50
+) {
+  const rowsById = new Map(bankRows.map((row) => [row.id, row]));
+  const matchedEntryIds = new Set(bankRows.filter(isApprovedBankMatch).map((row) => row.matchedCashLedgerEntryId).filter(Boolean));
+  const suggestedEntryIds = new Set(
+    suggestedMatches
+      .filter((match) => {
+        const row = rowsById.get(match.rowId);
+        return row ? !isAmbiguousLedgerSuggestion(match, row, ledgerEntries) : false;
+      })
+      .map((match) => match.ledgerEntryId)
+  );
+
+  return ledgerEntries
+    .filter((entry) => !matchedEntryIds.has(entry.id) && !suggestedEntryIds.has(entry.id))
+    .slice(0, limit)
+    .map((entry) => ({
+      id: entry.id,
+      date: dateInputValue(entry.date),
+      description: entry.description ?? "-",
+      direction: entry.direction,
+      amount: Math.abs(toNumber(entry.amount)),
+      incomeId: entry.incomeId,
+      expenseId: entry.expenseId
+    }));
 }
 
 function applyScreenRowFilters(
@@ -868,19 +879,101 @@ function buildInsights({
   return insights;
 }
 
-function recurringKey(row: CategorizedStatementRow) {
-  const normalized = normalizeTransactionText(row.description)
-    .replace(/\btr\d{2}[a-z0-9]{5,30}\b/g, "")
-    .replace(/\d+/g, " ")
-    .replace(/\b(eft|fast|havale|pos|atm|ref|no|islem|işlem)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .filter((part) => part.length > 3)
-    .slice(0, 5)
-    .join(" ");
+function buildRecurringItems(rows: CategorizedStatementRow[]) {
+  const grouped = groupRecurringRows(filterRecurringEligibleRows(rows));
 
-  return `${row.direction}:${row.category}:${normalized || row.category}`;
+  return grouped
+    .map(({ key, rows }) => buildRecurringItem(key, rows))
+    .filter((item): item is RecurringTransactionItem => item != null)
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function filterRecurringEligibleRows(rows: CategorizedStatementRow[]) {
+  const datedRows = rows.filter(
+    (row) => row.date && row.amount > 0 && row.direction !== "NEUTRAL" && row.group !== "TRANSFER" && !isIgnoredBankMatch(row)
+  );
+  const dates = datedRows.map((row) => parseRecurringDate(row.date)).filter((date): date is Date => date != null);
+
+  if (dates.length === 0) {
+    return [];
+  }
+
+  const anchorDate = new Date(Math.max(...dates.map((date) => date.getTime())));
+  const startDate = addMonths(new Date(`${dateInputValue(anchorDate).slice(0, 7)}-01T00:00:00+03:00`), -11);
+
+  return datedRows.filter((row) => {
+    const date = parseRecurringDate(row.date);
+    return date ? date >= startDate && date <= anchorDate : false;
+  });
+}
+
+function groupRecurringRows(rows: CategorizedStatementRow[]) {
+  const buckets: Array<{ key: string; baseKey: string; rows: CategorizedStatementRow[] }> = [];
+
+  for (const row of rows) {
+    const baseKey = recurringBaseKey(row);
+    const bucket = buckets.find((item) => item.baseKey === baseKey && amountFitsRecurringBucket(item.rows, row));
+
+    if (bucket) {
+      bucket.rows.push(row);
+    } else {
+      buckets.push({
+        key: `${baseKey}:${buckets.length + 1}`,
+        baseKey,
+        rows: [row]
+      });
+    }
+  }
+
+  return buckets;
+}
+
+function recurringBaseKey(row: CategorizedStatementRow) {
+  return `${row.direction}:${recurringSemanticGroup(row)}`;
+}
+
+function recurringSemanticGroup(row: CategorizedStatementRow) {
+  if (isRentLikeRecurringRow(row)) {
+    return "rent";
+  }
+
+  const category = normalizeRecurringText(row.category);
+  if (category) {
+    return category;
+  }
+
+  return normalizeRecurringText(row.description).split(" ").slice(0, 4).join(" ") || "uncategorized";
+}
+
+function isRentLikeRecurringRow(row: CategorizedStatementRow) {
+  const text = normalizeRecurringText(`${row.category} ${row.description} ${row.counterparty ?? ""}`);
+  return (
+    /\bkira\b/.test(text) ||
+    /\bkirasi\b/.test(text) ||
+    /\brent\b/.test(text) ||
+    text.includes("office rent") ||
+    text.includes("ofis kira") ||
+    text.includes("dukkan kira")
+  );
+}
+
+function normalizeRecurringText(value: string) {
+  return normalizeTransactionText(value)
+    .replace(/\b(ocak|subat|şubat|mart|nisan|mayis|mayıs|haziran|temmuz|agustos|ağustos|eylul|eylül|ekim|kasim|kasım|aralik|aralık)\b/g, " ")
+    .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/g, " ")
+    .replace(/\b(ay|ayi|donem|dönem|period|month|yil|yıl|year|q[1-4])\b/g, " ")
+    .replace(/\b20\d{2}\b/g, " ")
+    .replace(/\b\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?\b/g, " ")
+    .replace(/\b\d+\b/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function amountFitsRecurringBucket(rows: CategorizedStatementRow[], row: CategorizedStatementRow) {
+  const averageAmount = rows.reduce((total, item) => total + item.amount, 0) / rows.length;
+  const tolerance = Math.max(100, averageAmount * 0.1);
+  return Math.abs(row.amount - averageAmount) <= tolerance;
 }
 
 function buildRecurringItem(key: string, rows: CategorizedStatementRow[]): RecurringTransactionItem | null {
@@ -891,36 +984,119 @@ function buildRecurringItem(key: string, rows: CategorizedStatementRow[]): Recur
   const distinctMonths = new Set(datedRows.map((row) => String(row.date).slice(0, 7))).size;
   if (distinctMonths < 2) return null;
 
-  const intervals = datedRows.slice(1).map((row, index) => {
-    const previous = new Date(`${datedRows[index].date}T00:00:00+03:00`);
+  const monthAnchorRows = firstRowsByMonth(datedRows);
+  const intervals = monthAnchorRows.slice(1).map((row, index) => {
+    const previous = new Date(`${monthAnchorRows[index].date}T00:00:00+03:00`);
     const current = new Date(`${row.date}T00:00:00+03:00`);
     return Math.round((current.getTime() - previous.getTime()) / 86400000);
   });
   const averageIntervalDays = intervals.length > 0 ? Math.round(intervals.reduce((total, day) => total + day, 0) / intervals.length) : null;
-  const regularEnough = averageIntervalDays == null || (averageIntervalDays >= 20 && averageIntervalDays <= 45) || distinctMonths >= 3;
-  if (!regularEnough) return null;
+  const frequency = recurringFrequency(intervals, distinctMonths);
 
   const totalAmount = rows.reduce((total, row) => total + row.amount, 0);
   const firstDate = datedRows[0]?.date ?? null;
   const lastDate = datedRows[datedRows.length - 1]?.date ?? null;
   const nextExpectedDate =
     lastDate && averageIntervalDays ? dateInputValue(new Date(new Date(`${lastDate}T00:00:00+03:00`).getTime() + averageIntervalDays * 86400000)) : null;
-  const [, category, label] = key.split(":");
+  const category = mostCommon(rows.map((row) => row.category)) || rows[0].category;
+  const label = recurringLabel(rows) || category;
+  const confidence = recurringConfidence(rows, frequency);
 
   return {
     key,
+    name: label || category,
     label: label || category || rows[0].category,
     direction: rows[0].direction,
-    category: rows[0].category,
+    category,
     count: rows.length,
     distinctMonths,
     averageAmount: roundMoney(totalAmount / rows.length),
+    total: roundMoney(totalAmount),
     totalAmount: roundMoney(totalAmount),
     averageIntervalDays,
     firstDate,
     lastDate,
-    nextExpectedDate
+    nextExpectedDate,
+    frequency,
+    confidence
   };
+}
+
+function parseRecurringDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00+03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function firstRowsByMonth(rows: CategorizedStatementRow[]) {
+  const monthMap = new Map<string, CategorizedStatementRow>();
+
+  for (const row of rows) {
+    const month = String(row.date).slice(0, 7);
+    if (!monthMap.has(month)) {
+      monthMap.set(month, row);
+    }
+  }
+
+  return [...monthMap.values()];
+}
+
+function recurringFrequency(intervals: number[], distinctMonths: number): RecurringTransactionItem["frequency"] {
+  if (intervals.length > 0 && intervals.every((day) => day >= 25 && day <= 35)) {
+    return "MONTHLY";
+  }
+
+  return distinctMonths >= 3 ? "REGULAR" : "IRREGULAR";
+}
+
+function recurringConfidence(rows: CategorizedStatementRow[], frequency: RecurringTransactionItem["frequency"]) {
+  const averageAmount = rows.reduce((total, row) => total + row.amount, 0) / rows.length;
+  const maxAmount = Math.max(...rows.map((row) => row.amount));
+  const minAmount = Math.min(...rows.map((row) => row.amount));
+  const amountVariance = averageAmount > 0 ? (maxAmount - minAmount) / averageAmount : 1;
+  const strongCategorySignal = rows.some((row) => row.confidence >= 0.78 || isRentLikeRecurringRow(row));
+
+  let confidence = 0.45;
+  if (rows.length >= 4) confidence += 0.08;
+  if (frequency === "MONTHLY") confidence += 0.24;
+  else if (frequency === "REGULAR") confidence += 0.14;
+  if (amountVariance <= 0.1) confidence += 0.16;
+  else if (amountVariance <= 0.2) confidence += 0.08;
+  if (strongCategorySignal) confidence += 0.16;
+
+  return roundMoney(Math.min(0.98, confidence));
+}
+
+function mostCommon(values: string[]) {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"))[0]?.[0] ?? null;
+}
+
+function recurringLabel(rows: CategorizedStatementRow[]) {
+  const words = new Map<string, number>();
+  const stopWords = new Set(["eft", "fast", "havale", "pos", "atm", "ref", "no", "islem", "işlem"]);
+
+  for (const row of rows) {
+    for (const word of normalizeTransactionText(row.description)
+      .replace(/\btr\d{2}[a-z0-9]{5,30}\b/g, " ")
+      .replace(/\d+/g, " ")
+      .replace(/[^\p{L}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((part) => part.length > 3 && !stopWords.has(part))) {
+      words.set(word, (words.get(word) ?? 0) + 1);
+    }
+  }
+
+  return [...words.entries()]
+    .filter(([, count]) => count >= Math.min(2, rows.length))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"))
+    .slice(0, 4)
+    .map(([word]) => word)
+    .join(" ");
 }
 
 function matchNamedEntity(description: string, entities: Array<{ id: string; name: string }>) {

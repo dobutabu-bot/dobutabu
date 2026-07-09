@@ -3,6 +3,7 @@ import { Apple, Chrome, Compass, MonitorSmartphone, ShieldCheck, Smartphone } fr
 import Link from "next/link";
 
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { knownLimitations } from "@/lib/system-status";
 
 export const metadata: Metadata = {
   title: "PWA Kurulum",
@@ -43,8 +44,10 @@ const installGuides = [
 ];
 
 export default function InstallPage() {
+  const limitations = knownLimitations();
+
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8" data-testid="page-ready-install">
       <div className="mx-auto max-w-6xl space-y-5">
         <section className="surface-dark overflow-hidden p-5 sm:p-6">
           <div className="grid gap-5 lg:grid-cols-[1fr_420px] lg:items-end">
@@ -103,6 +106,28 @@ export default function InstallPage() {
             Production ortamında PWA install ve tarayıcı bildirimleri için HTTPS gerekir. Hücresel veride hızlı
             açılış için statik kabuk, ikonlar ve Next.js statik dosyaları service worker tarafından cache edilir.
           </p>
+        </section>
+
+        <section className="surface p-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+              <ShieldCheck className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-950">Şeffaf Kullanım Notları</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Bu notlar bir eksiklik listesi değil; uygulamanın güvenilir ve doğru sınırlar içinde kullanılabilmesi için açıkça paylaşılan ürün kapsamıdır.
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 grid gap-2 md:grid-cols-2">
+            {limitations.map((item) => (
+              <li key={item} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm leading-6 text-slate-700">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" aria-hidden />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
     </main>

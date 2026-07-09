@@ -83,14 +83,14 @@ export function MissingDocumentActions({ record, documentOptions }: MissingDocum
 
   return (
     <div className="flex min-w-64 flex-col gap-2 lg:min-w-72">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Link href={record.uploadHref} className="primary-action min-h-10 px-3">
+      <div className="flex min-w-0 flex-wrap justify-end gap-2">
+        <Link href={record.uploadHref} className="primary-action min-h-11 px-4 text-sm leading-none">
           <FilePlus2 className="h-4 w-4" aria-hidden />
           Belge Yükle
         </Link>
         <button
           type="button"
-          className="secondary-action min-h-10 px-3 text-slate-700"
+          className="secondary-action min-h-11 px-4 text-sm leading-none text-slate-700"
           disabled={Boolean(loadingAction)}
           onClick={markNotRequired}
         >
@@ -100,7 +100,7 @@ export function MissingDocumentActions({ record, documentOptions }: MissingDocum
       </div>
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
         <select
-          className="field min-h-10 text-xs"
+          className="field min-h-11 text-sm"
           value={selectedDocumentId}
           onChange={(event) => setSelectedDocumentId(event.currentTarget.value)}
           disabled={documentOptions.length === 0 || Boolean(loadingAction)}
@@ -118,7 +118,7 @@ export function MissingDocumentActions({ record, documentOptions }: MissingDocum
         </select>
         <button
           type="button"
-          className="secondary-action min-h-10 justify-center px-3"
+          className="secondary-action min-h-11 justify-center px-4 text-sm leading-none"
           disabled={!selectedDocumentId || Boolean(loadingAction)}
           onClick={linkSelectedDocument}
         >

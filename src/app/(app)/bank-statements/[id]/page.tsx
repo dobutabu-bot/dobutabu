@@ -53,20 +53,20 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
         </Link>
         <div className="flex flex-wrap gap-2">
           {bankImport.document ? (
-            <Link href={`/api/documents/${bankImport.document.id}/download`} className="secondary-action min-h-10 px-3">
+            <Link href={`/api/documents/${bankImport.document.id}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               Orijinal Dosya
             </Link>
           ) : null}
-          <Link href={`/api/reports/bank-analysis/${bankImport.id}/pdf`} className="secondary-action min-h-10 px-3">
+          <Link href={`/api/reports/bank-analysis/${bankImport.id}/pdf`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <FileText className="h-4 w-4" aria-hidden />
             PDF Analiz
           </Link>
-          <Link href={`/bank-statements/${bankImport.id}/analysis`} className="secondary-action min-h-10 px-3">
+          <Link href={`/bank-statements/${bankImport.id}/analysis`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <BarChart3 className="h-4 w-4" aria-hidden />
             Son 12 Ay
           </Link>
-          <Link href={`/bank-statements/${bankImport.id}/reconciliation`} className="secondary-action min-h-10 px-3">
+          <Link href={`/bank-statements/${bankImport.id}/reconciliation`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <SearchCheck className="h-4 w-4" aria-hidden />
             Mutabakat
           </Link>

@@ -17,8 +17,8 @@ type DataTableProps<T> = {
 
 export function DataTable<T>({ columns, rows, empty }: DataTableProps<T>) {
   return (
-    <div className="min-w-0">
-      <div className="surface overflow-hidden md:hidden">
+    <div className="w-full max-w-full min-w-0">
+      <div className="surface w-full max-w-full min-w-0 overflow-hidden md:hidden">
         {rows.length === 0 ? (
           <EmptyState title={empty} />
         ) : (
@@ -30,38 +30,38 @@ export function DataTable<T>({ columns, rows, empty }: DataTableProps<T>) {
         )}
       </div>
 
-      <div className="surface hidden overflow-hidden md:block">
-        <div className="scroll-x-stable">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-950 text-xs uppercase text-slate-300">
-            <tr>
-              {columns.map((column) => (
-                <th key={column.header} className={cnHeader(column.header)}>
-                  {column.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 ? (
+      <div className="surface hidden w-full max-w-full min-w-0 overflow-hidden md:block">
+        <div className="scroll-x-stable w-full max-w-full">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="border-b border-slate-200 bg-slate-950 text-xs uppercase text-slate-300">
               <tr>
-                <td colSpan={columns.length}>
-                  <EmptyState title={empty} />
-                </td>
+                {columns.map((column) => (
+                  <th key={column.header} className={cnHeader(column.header)}>
+                    {column.header}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              rows.map((row, index) => (
-                <tr key={index} className="bg-white hover:bg-slate-50/70">
-                  {columns.map((column) => (
-                    <td key={column.header} className={cnCell(column.header, column.className)}>
-                      {renderCell(column, row)}
-                    </td>
-                  ))}
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length}>
+                    <EmptyState title={empty} />
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                rows.map((row, index) => (
+                  <tr key={index} className="bg-white transition hover:bg-slate-50/70">
+                    {columns.map((column) => (
+                      <td key={column.header} className={cnCell(column.header, column.className)}>
+                        {renderCell(column, row)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -75,16 +75,20 @@ function MobileDataCard<T>({ row, columns }: { row: T; columns: Column<T>[] }) {
   const detailColumns = columns.filter((column, index) => index > 1 && !isActionColumn(column.header));
 
   return (
-    <article className="bg-white/75 p-3">
-      <div className="flex items-start justify-between gap-3 rounded-2xl bg-slate-50/80 p-3">
+    <article className="w-full max-w-full min-w-0 bg-white/75 p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50/80 p-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{primaryColumn.header}</p>
-          <div className="mt-1 truncate text-sm font-semibold text-slate-950">{renderCell(primaryColumn, row)}</div>
+          <div className={cn("mt-1 truncate text-sm font-semibold text-slate-950", isSensitiveFinancialColumn(primaryColumn.header) && "tabular-finance")}>
+            {renderCell(primaryColumn, row)}
+          </div>
         </div>
         {secondaryColumn ? (
-          <div className="max-w-[45%] shrink-0 text-right">
+          <div className="min-w-0 max-w-[45%] shrink-0 text-right">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{secondaryColumn.header}</p>
-            <div className="mt-1 truncate text-sm font-medium text-slate-700">{renderCell(secondaryColumn, row)}</div>
+            <div className={cn("mt-1 truncate text-sm font-medium text-slate-700", isSensitiveFinancialColumn(secondaryColumn.header) && "tabular-finance font-semibold")}>
+              {renderCell(secondaryColumn, row)}
+            </div>
           </div>
         ) : null}
       </div>
@@ -92,18 +96,20 @@ function MobileDataCard<T>({ row, columns }: { row: T; columns: Column<T>[] }) {
       {detailColumns.length > 0 ? (
         <dl className="mt-3 grid gap-2">
           {detailColumns.map((column) => (
-            <div key={column.header} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 bg-white/80 px-3 py-2">
+            <div key={column.header} className="flex min-w-0 items-start justify-between gap-3 rounded-2xl border border-slate-100 bg-white/80 px-3 py-2">
               <dt className="shrink-0 text-xs font-medium text-slate-500">{column.header}</dt>
-              <dd className={cn("min-w-0 text-right text-sm text-slate-800", column.className)}>{renderCell(column, row)}</dd>
+              <dd className={cn("min-w-0 break-words text-right text-sm text-slate-800 [overflow-wrap:anywhere]", isSensitiveFinancialColumn(column.header) && "tabular-finance font-semibold", column.className)}>
+                {renderCell(column, row)}
+              </dd>
             </div>
           ))}
         </dl>
       ) : null}
 
       {actionColumns.length > 0 ? (
-        <div className="mt-3 rounded-2xl border border-slate-100 bg-white/80 p-2">
+        <div className="mt-3 grid w-full max-w-full min-w-0 gap-2 rounded-2xl border border-slate-100 bg-white/80 p-2 [&_a]:w-full [&_button]:w-full">
           {actionColumns.map((column) => (
-            <div key={column.header} className="flex justify-end">
+            <div key={column.header} className="flex w-full min-w-0 justify-end">
               {renderCell(column, row)}
             </div>
           ))}
@@ -115,8 +121,9 @@ function MobileDataCard<T>({ row, columns }: { row: T; columns: Column<T>[] }) {
 
 function cnHeader(header: string) {
   return [
-    "px-4 py-3 font-medium whitespace-nowrap",
-    isActionColumn(header) ? "sticky right-0 z-10 min-w-44 bg-slate-950 text-right shadow-[-12px_0_18px_rgba(15,23,42,0.12)]" : ""
+    "px-4 py-3 font-medium whitespace-nowrap tracking-[0.08em]",
+    isActionColumn(header) ? "sticky right-0 z-10 min-w-44 bg-slate-950 text-right shadow-[-12px_0_18px_rgba(15,23,42,0.12)]" : "",
+    isSensitiveFinancialColumn(header) ? "tabular-finance" : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -126,6 +133,7 @@ function cnCell(header: string, className?: string) {
   return [
     "px-4 py-3 align-top text-slate-700",
     isActionColumn(header) ? "sticky right-0 z-10 min-w-44 bg-white text-right shadow-[-12px_0_18px_rgba(15,23,42,0.05)]" : "",
+    isSensitiveFinancialColumn(header) ? "tabular-finance font-semibold text-slate-900" : "",
     className
   ]
     .filter(Boolean)

@@ -254,10 +254,10 @@ function Pagination({
 }) {
   if (totalPages <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-between gap-3">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
       <Link
         href={buildHref(basePath, { ...searchParams, page: String(Math.max(1, page - 1)) })}
-        className={cn("secondary-action min-h-10", page <= 1 && "pointer-events-none opacity-50")}
+        className={cn("secondary-action min-h-[44px] px-4 text-sm leading-none", page <= 1 && "pointer-events-none opacity-50")}
       >
         Önceki
       </Link>
@@ -266,7 +266,7 @@ function Pagination({
       </span>
       <Link
         href={buildHref(basePath, { ...searchParams, page: String(Math.min(totalPages, page + 1)) })}
-        className={cn("secondary-action min-h-10", page >= totalPages && "pointer-events-none opacity-50")}
+        className={cn("secondary-action min-h-[44px] px-4 text-sm leading-none", page >= totalPages && "pointer-events-none opacity-50")}
       >
         Sonraki
         <ArrowRight className="h-4 w-4" aria-hidden />

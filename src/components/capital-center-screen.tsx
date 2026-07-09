@@ -163,16 +163,16 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
           <h2 className="text-lg font-semibold text-slate-950">Varlık Kartları</h2>
           <p className="mt-1 text-sm text-slate-500">Değerleri manuel güncelleyebilir, kasa hesabına bağlı varlıkları dijital kasa bakiyesiyle izleyebilirsiniz.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/api/export?resource=capitalAssets&format=csv" className="secondary-action min-h-10">
+        <div className="flex min-w-0 flex-wrap gap-2">
+          <Link href="/api/export?resource=capitalAssets&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             Varlık CSV
           </Link>
-          <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-10">
+          <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             Değerleme CSV
           </Link>
-          <Link href="/api/reports/capital/pdf" className="secondary-action min-h-10">
+          <Link href="/api/reports/capital/pdf" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             PDF
           </Link>

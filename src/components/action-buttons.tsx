@@ -64,7 +64,7 @@ export function ActionButton({
 
 function actionButtonClass(tone: NonNullable<ActionButtonProps["tone"]>) {
   const base =
-    "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium leading-none transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   if (tone === "danger") {
     return cn(base, "border border-rose-200 bg-white text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-200");

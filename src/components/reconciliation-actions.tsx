@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { TouchActionButton, touchActionButtonClass } from "@/components/touch-action-button";
+
 type ActionButtonProps = {
   endpoint: string;
   payload: Record<string, unknown>;
@@ -52,15 +54,15 @@ export function ReconciliationActionButton({ endpoint, payload, label, variant =
   }
 
   return (
-    <button type="button" onClick={runAction} disabled={pending} className={buttonClass(variant)}>
+    <TouchActionButton onClick={runAction} disabled={pending} tone={buttonTone(variant)}>
       {pending ? "İşleniyor..." : label}
-    </button>
+    </TouchActionButton>
   );
 }
 
 export function AutoMatchButton() {
   return (
-    <a href="#match-suggestions" className="primary-action min-h-11">
+    <a href="#match-suggestions" className={touchActionButtonClass("primary")}>
       Otomatik eşleştir
     </a>
   );
@@ -104,36 +106,49 @@ export function ManualReconciliationForm({
   }
 
   return (
-    <form onSubmit={submitManualMatch} className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-      <label className="grid gap-1 text-sm">
+    <form onSubmit={submitManualMatch} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <label className="grid min-w-0 gap-1 text-sm">
         <span className="text-xs font-medium text-slate-600">Banka hareketi seç</span>
-        <select value={bankRowId} onChange={(event) => setBankRowId(event.target.value)} className="input min-h-11">
+        <select value={bankRowId} onChange={(event) => setBankRowId(event.target.value)} className="input min-h-11 w-full min-w-0">
           {bankRows.map((row) => (
             <option key={row.id} value={row.id}>
-              {row.date ?? "-"} · {row.direction} · {row.amount.toLocaleString("tr-TR")} · {row.description.slice(0, 80)}
+              {formatManualOptionLabel(row)}
             </option>
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid min-w-0 gap-1 text-sm">
         <span className="text-xs font-medium text-slate-600">Sistem hareketi seç</span>
-        <select value={systemEntryId} onChange={(event) => setSystemEntryId(event.target.value)} className="input min-h-11">
+        <select value={systemEntryId} onChange={(event) => setSystemEntryId(event.target.value)} className="input min-h-11 w-full min-w-0">
           {systemMovements.map((row) => (
             <option key={row.id} value={row.id}>
-              {row.date} · {row.direction} · {row.amount.toLocaleString("tr-TR")} · {row.description.slice(0, 80)}
+              {formatSystemOptionLabel(row)}
             </option>
           ))}
         </select>
       </label>
-      <button type="submit" disabled={pending} className="primary-action min-h-11 self-end">
+      <TouchActionButton type="submit" disabled={pending} tone="primary" className="w-full self-end lg:w-auto">
         {pending ? "Eşleştiriliyor..." : "Eşleştir"}
-      </button>
+      </TouchActionButton>
     </form>
   );
 }
 
-function buttonClass(variant: ActionButtonProps["variant"]) {
-  if (variant === "danger") return "danger-action min-h-9 px-2 text-xs";
-  if (variant === "success") return "primary-action min-h-9 px-2 text-xs";
-  return "secondary-action min-h-9 px-2 text-xs";
+function formatManualOptionLabel(row: ManualOption) {
+  return `${row.date ?? "-"} · ${row.direction} · ${row.amount.toLocaleString("tr-TR")} · ${truncateOptionText(row.description)}`;
+}
+
+function formatSystemOptionLabel(row: SystemOption) {
+  return `${row.date} · ${row.direction} · ${row.amount.toLocaleString("tr-TR")} · ${truncateOptionText(row.description)}`;
+}
+
+function truncateOptionText(value: string) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 18 ? `${normalized.slice(0, 18)}...` : normalized;
+}
+
+function buttonTone(variant: ActionButtonProps["variant"]) {
+  if (variant === "danger") return "danger";
+  if (variant === "success") return "primary";
+  return "default";
 }

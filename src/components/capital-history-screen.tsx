@@ -55,12 +55,12 @@ export function CapitalHistoryScreen({ data }: { data: CapitalCenterData }) {
             <h2 className="text-sm font-semibold text-slate-950">Değerleme Geçmişi</h2>
             <p className="mt-1 text-xs text-slate-500">Manuel değer güncellemeleri ve ileride import/sistem kaynaklı kayıtlar burada izlenir.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-10">
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
             </Link>
-            <Link href="/api/reports/capital/pdf" className="secondary-action min-h-10">
+            <Link href="/api/reports/capital/pdf" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               PDF indir
             </Link>

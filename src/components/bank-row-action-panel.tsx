@@ -4,6 +4,8 @@ import { RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { TouchActionButton } from "@/components/touch-action-button";
+
 type BankRowActionPanelProps = {
   row: {
     id: string;
@@ -202,53 +204,51 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
 
   return (
     <>
-      <div className="flex flex-wrap justify-end gap-1.5">
+      <div className="flex w-full max-w-full min-w-0 flex-wrap justify-stretch gap-2 sm:justify-end [&_button]:w-full sm:[&_button]:w-auto">
         {isClosedRow(row.matchType) ? (
-          <button type="button" onClick={() => setConfirmAction("UNDO")} className="secondary-action min-h-9 px-2 text-xs">
+          <TouchActionButton onClick={() => setConfirmAction("UNDO")}>
             Geri al
-          </button>
+          </TouchActionButton>
         ) : (
           <>
             {row.direction === "IN" ? (
-              <button type="button" onClick={() => openCreate("INCOME")} className="primary-action min-h-9 px-2 text-xs">
+              <TouchActionButton tone="primary" onClick={() => openCreate("INCOME")}>
                 Tahsilat oluştur
-              </button>
+              </TouchActionButton>
             ) : null}
             {row.direction === "OUT" ? (
-              <button type="button" onClick={() => openCreate("EXPENSE")} className="primary-action min-h-9 px-2 text-xs">
+              <TouchActionButton tone="primary" onClick={() => openCreate("EXPENSE")}>
                 Gider oluştur
-              </button>
+              </TouchActionButton>
             ) : null}
             {row.direction !== "NEUTRAL" ? (
               <>
-                <button type="button" onClick={() => openCreate("LEDGER")} className="secondary-action min-h-9 px-2 text-xs">
+                <TouchActionButton onClick={() => openCreate("LEDGER")}>
                   Kasa hareketi
-                </button>
-                <button
-                  type="button"
+                </TouchActionButton>
+                <TouchActionButton
                   onClick={() => {
                     setMatchTargetType(row.direction === "IN" ? "INCOME" : "EXPENSE");
                     setMatchTargetId("");
                     setMatchOpen(true);
                   }}
-                  className="secondary-action min-h-9 px-2 text-xs"
                 >
                   Var olanla eşleştir
-                </button>
+                </TouchActionButton>
               </>
             ) : null}
-            <button type="button" onClick={() => setConfirmAction("IGNORE")} className="danger-action min-h-9 px-2 text-xs">
+            <TouchActionButton tone="danger" onClick={() => setConfirmAction("IGNORE")}>
               Yoksay
-            </button>
+            </TouchActionButton>
           </>
         )}
       </div>
 
       {createMode ? (
         <Modal title={createTitle(createMode)} onClose={closePanels}>
-          <form onSubmit={submitCreate} className="space-y-4">
+          <form onSubmit={submitCreate} className="min-w-0 space-y-4">
             <BankRowSummary row={row} />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <Field label="Tarih">
                 <input className="field" type="date" value={form.date} onChange={(event) => setFormValue("date", event.target.value)} required />
               </Field>
@@ -328,13 +328,13 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
                 <textarea className="field min-h-24 resize-none" value={form.description} onChange={(event) => setFormValue("description", event.target.value)} />
               </Field>
             </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={closePanels} className="secondary-action min-h-11 justify-center">
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <TouchActionButton onClick={closePanels} className="justify-center">
                 Vazgeç
-              </button>
-              <button type="submit" disabled={pending} className="primary-action min-h-11 justify-center">
+              </TouchActionButton>
+              <TouchActionButton type="submit" disabled={pending} tone="primary" className="justify-center">
                 {pending ? "Oluşturuluyor..." : "Onayla ve Oluştur"}
-              </button>
+              </TouchActionButton>
             </div>
           </form>
         </Modal>
@@ -342,9 +342,9 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
 
       {matchOpen ? (
         <Modal title="Var Olan Kayıtla Eşleştir" onClose={closePanels}>
-          <form onSubmit={submitMatch} className="space-y-4">
+          <form onSubmit={submitMatch} className="min-w-0 space-y-4">
             <BankRowSummary row={row} />
-            <div className="grid gap-3">
+            <div className="grid min-w-0 gap-3">
               <Field label="Eşleştirme türü">
                 <select
                   className="field"
@@ -370,13 +370,13 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
                 </select>
               </Field>
             </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={closePanels} className="secondary-action min-h-11 justify-center">
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <TouchActionButton onClick={closePanels} className="justify-center">
                 Vazgeç
-              </button>
-              <button type="submit" disabled={pending || matchOptions.length === 0} className="primary-action min-h-11 justify-center">
+              </TouchActionButton>
+              <TouchActionButton type="submit" disabled={pending || matchOptions.length === 0} tone="primary" className="justify-center">
                 {pending ? "Eşleştiriliyor..." : "Onayla ve Eşleştir"}
-              </button>
+              </TouchActionButton>
             </div>
           </form>
         </Modal>
@@ -393,10 +393,10 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
                   ? "Bankadan oluşturulan kayıt ve bağlı kasa hareketi soft delete yapılacak, banka satırı yeniden eşleşmemiş duruma dönecek."
                   : "Banka hareketinin mevcut eşleşmesi kaldırılacak, sistemdeki kayıt silinmeyecek."}
             </p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={closePanels} className="secondary-action min-h-11 justify-center">
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <TouchActionButton onClick={closePanels} className="justify-center">
                 Vazgeç
-              </button>
+              </TouchActionButton>
               <PostButton
                 endpoint={confirmAction === "IGNORE" ? "/api/reconciliation/ignore" : "/api/reconciliation/unmatch"}
                 payload={{ bankRowId: row.id }}
@@ -457,10 +457,10 @@ function formatDateInput(value: string | null) {
 
 function BankRowSummary({ row }: { row: BankRowActionPanelProps["row"] }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+    <div className="min-w-0 rounded-3xl border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Banka hareketi</p>
       <p className="mt-1 text-sm text-slate-600">{formatDateInput(row.date)}</p>
-      <p className="mt-2 line-clamp-3 text-sm font-medium text-slate-950">{row.description}</p>
+      <p className="mt-2 line-clamp-3 break-words text-sm font-medium text-slate-950 [overflow-wrap:anywhere]">{row.description}</p>
       <p className={row.direction === "IN" ? "mt-2 text-sm font-semibold text-emerald-700 tabular-nums" : "mt-2 text-sm font-semibold text-rose-700 tabular-nums"}>
         {row.direction === "IN" ? "+" : row.direction === "OUT" ? "-" : ""}
         {row.amountLabel}
@@ -471,7 +471,7 @@ function BankRowSummary({ row }: { row: BankRowActionPanelProps["row"] }) {
 
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <label className={`space-y-1 ${className}`}>
+    <label className={`min-w-0 space-y-1 ${className}`}>
       <span className="label">{label}</span>
       {children}
     </label>
@@ -481,15 +481,15 @@ function Field({ label, children, className = "" }: { label: string; children: R
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-white/70 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-w-2xl sm:rounded-3xl sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
+      <div className="max-h-[92dvh] w-full max-w-[100vw] min-w-0 overflow-y-auto rounded-t-3xl border border-white/70 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-w-[min(42rem,calc(100vw-2rem))] sm:rounded-3xl sm:p-5">
+        <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Onay gerekli</p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-950">{title}</h2>
+            <h2 className="mt-1 break-words text-lg font-semibold text-slate-950">{title}</h2>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:bg-slate-50" aria-label="Kapat">
+          <TouchActionButton iconOnly onClick={onClose} className="shrink-0 rounded-2xl border-slate-200 bg-white text-slate-600 shadow-none hover:bg-slate-50" aria-label="Kapat">
             <X className="h-5 w-5" aria-hidden />
-          </button>
+          </TouchActionButton>
         </div>
         {children}
       </div>
@@ -522,16 +522,16 @@ function PostButton({ endpoint, payload, label, onDone }: { endpoint: string; pa
   }
 
   return (
-    <button type="button" onClick={run} disabled={pending} className="danger-action min-h-11 justify-center">
+    <TouchActionButton tone="danger" onClick={run} disabled={pending} className="justify-center">
       {pending ? (
         <>
           <RotateCcw className="h-3.5 w-3.5 animate-spin" aria-hidden />
           İşleniyor
         </>
       ) : (
-        label
+          label
       )}
-    </button>
+    </TouchActionButton>
   );
 }
 

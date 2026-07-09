@@ -1,0 +1,35 @@
+name: V3 Staging Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  staging-smoke:
+    name: Run staging smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare environment
+        run: |
+          cp .env.staging.example .env.staging
+
+      - name: Make staging scripts executable
+        run: |
+          chmod +x scripts/staging-preflight.sh scripts/staging-smoke.sh
+
+      - name: Preflight
+        run: npm run staging:preflight
+
+      - name: Smoke
+        run: npm run staging:smoke -- --down
+
+      - name: Dump compose config on failure
+        if: failure()
+        run: docker compose -f docker-compose.staging.yml config
+
+      - name: Dump app logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.staging.yml logs --tail=250 app || true

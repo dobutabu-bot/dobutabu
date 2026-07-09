@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const TEST_EMAIL = process.env.ADMIN_EMAIL ?? "avukat@example.com";
+const TEST_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3006";
 
 const v3RouteGroups = [
   {
@@ -336,12 +337,11 @@ async function loginByCookie(page: Page) {
   const user = await prisma.user.findUnique({ where: { email: TEST_EMAIL } });
   expect(user, `Seed kullanıcısı bulunamadı: ${TEST_EMAIL}`).toBeTruthy();
 
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.context().addCookies([
     {
       name: "hukuk_finans_session",
       value: createSessionTokenForTest(user!.id),
-      url: new URL("/", page.url()).toString(),
+      url: new URL("/", TEST_BASE_URL).toString(),
       httpOnly: true,
       sameSite: "Lax",
       expires: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30
@@ -349,6 +349,7 @@ async function loginByCookie(page: Page) {
   ]);
 
   await gotoRoute(page, "/dashboard");
+  await waitForBodyText(page, "Dijital Kasa");
   await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
 }
 
@@ -358,8 +359,8 @@ async function gotoRoute(page: Page, route: string) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("domcontentloaded").catch(() => undefined);
       if (isExpectedPath(page.url(), route)) {
-        await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
-        await page.waitForTimeout(100);
+        await waitForBodyReady(page);
+        await waitForClientRouteSettled(page);
         return;
       }
     } catch (error) {
@@ -374,6 +375,27 @@ async function gotoRoute(page: Page, route: string) {
 
     await page.waitForTimeout(200);
   }
+}
+
+async function waitForBodyReady(page: Page) {
+  await page.waitForFunction(
+    () => document.readyState !== "loading" && document.body.innerText.trim().length > 0,
+    null,
+    { timeout: 30_000 }
+  );
+}
+
+async function waitForClientRouteSettled(page: Page) {
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
+  await page.waitForTimeout(100);
+}
+
+async function waitForBodyText(page: Page, text: string) {
+  await page.waitForFunction(
+    (expectedText) => document.body.innerText.includes(expectedText),
+    text,
+    { timeout: 30_000 }
+  );
 }
 
 function isExpectedPath(url: string, route: string) {
@@ -460,7 +482,7 @@ async function evaluateTouchTargets(page: Page) {
             const rect = element.getBoundingClientRect();
             if (style.display === "none" || style.visibility === "hidden") return false;
             if (rect.width === 0 || rect.height === 0) return false;
-            return rect.width < 40 || rect.height < 40;
+            return rect.width < 44 || rect.height < 44;
           })
           .slice(0, 5)
           .map((element) => {

@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f6f9] px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-[#f4f6f9] px-4 py-8" data-testid="page-ready-login">
       <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-premium">
         <div className="mb-6 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-950 text-white">

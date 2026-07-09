@@ -1,42 +1,42 @@
 # V3 Bilinen Sınırlamalar
 
-Bu sınırlamalar bilinçli ürün kararlarıdır; release'i engellemez ama kullanıcıya ve operasyona açıkça anlatılmalıdır.
+Bu bölüm bir “eksikler listesi” değil; V3-RC1’in güvenilir, denetlenebilir ve doğru kapsamda kullanılabilmesi için bilinçli olarak çizilen ürün sınırlarını açıklar. Amaç kullanıcının uygulamaya ne zaman güvenebileceğini, hangi işlemleri ayrıca yetkili sistemlerde yapması gerektiğini ve production kullanımında hangi operasyon koşullarının şart olduğunu netleştirmektir.
 
-## Entegrasyonlar
+## Şeffaf Kullanım Notları
 
-- GİB, e-SMM, e-Fatura, Paraşüt, Logo, Mikro ve banka API entegrasyonu yoktur.
-- Banka ekstresi importu CSV/XLSX önceliklidir. PDF banka ekstreleri bankadan bankaya değiştiği için düşük güvenli fallback olarak ele alınır.
-- Canlı döviz, altın, borsa veya crypto fiyat sağlayıcısı yoktur. Sermaye merkezi manuel değerleme ile çalışır.
-- Sistem yatırım tavsiyesi vermez; yalnızca kayıt, sınıflandırma ve görselleştirme yapar.
+| # | Sınırlama | Kullanıcı için anlamı |
+|---:|---|---|
+| 1 | Sistem resmi e-SMM/e-Fatura kesmez. | Makbuz/fatura ekranı takip ve raporlama içindir; resmi belge düzenleme yetkili e-belge sisteminde yapılmalıdır. |
+| 2 | GİB entegrasyonu yoktur. | GİB’e gönderim, iptal veya resmi doğrulama işlemleri uygulama dışındaki yetkili sistemlerden yürütülmelidir. |
+| 3 | Paraşüt, Logo ve Mikro entegrasyonu yoktur. | İlk sürüm manuel kayıt, CSV/Excel import-export, raporlama ve denetim izi odaklıdır. |
+| 4 | Banka API bağlantısı yoktur. | Banka hareketleri dosya yükleme yoluyla analiz edilir; banka hesabına canlı bağlantı kurulmaz. |
+| 5 | CSV/XLSX banka ekstresi önerilir. | Kolon eşleme, decimal format, duplicate kontrolü ve analiz sonuçları CSV/XLSX dosyalarında daha güvenilirdir. |
+| 6 | Banka PDF import düşük güvenli fallback’tir. | Banka PDF formatları farklı olduğu için sistem her PDF tablo yapısını kesin ayrıştıramayabilir. |
+| 7 | Taranmış PDF OCR aktif değilse otomatik okuma yapılamayabilir. | Seçilebilir metin içermeyen veya görüntü tabanlı PDF’lerde kullanıcı manuel metadata girebilir; görsel OCR ayrı/opsiyonel hattır. |
+| 8 | Canlı borsa, crypto, döviz veya altın fiyatı çekilmez. | Sermaye ekranındaki değerler kullanıcı tarafından manuel girilir ve güncellenir. |
+| 9 | Sermaye ekranı yatırım tavsiyesi vermez. | Ekran yalnızca kişisel/mesleki varlık takibi, kayıt ve görselleştirme amacıyla kullanılır. |
+| 10 | Offline veri yazma garanti edilmez. | PWA shell, ikonlar ve offline uyarı desteklenir; ancak çevrim dışıyken yeni kayıt oluşturmanın kalıcı yazılması garanti değildir. |
+| 11 | Production kullanım için HTTPS, güçlü şifre/secret, persistent storage ve düzenli backup gerekir. | Güvenli canlı kullanım için `AUTH_SECRET`, güçlü kullanıcı parolası, kalıcı database/storage ve yedekleme planı zorunludur. |
 
-## OCR ve Belge İşleme
+## Neden Böyle?
 
-- Image OCR opsiyonel worker hattıdır ve varsayılan olarak PNG/JPEG için tasarlanmıştır.
-- Taranmış PDF OCR aktif değildir. PDF görsele dönüştürme entegrasyonu ileride eklenecek ayrı bir konudur.
-- AV/CDR sağlayıcısı interface düzeyinde bırakılmıştır; varsayılan local geliştirmede devre dışıdır.
-- Extracted text hassas veri kabul edilir ve yalnız auth olan kullanıcı tarafından görülmelidir.
+Bu sınırlar V3-RC1’i daha güvenilir kılar:
 
-## Storage ve Backup
+- Resmi belge ve GİB işlemleri yanlışlıkla “tamamlandı” sanılmaz.
+- Banka verisi kullanıcı onayı olmadan finans kaydına dönüşmez.
+- PDF ve OCR gibi format riski yüksek alanlarda sistem aşırı iddialı davranmaz.
+- Sermaye ekranı finansal karar yönlendirmez; yalnız kayıt ve analiz desteği sunar.
+- Production koşulları açık olduğu için veri kaybı, gizlilik ve erişim riskleri azaltılır.
 
-- Belgeler `public/` altında tutulmaz; private storage kökü varsayılan olarak `./storage/documents` olur.
-- JSON/CSV export belge metadata'sını içerir; fiziksel belge dosyaları ayrıca yedeklenmelidir.
-- Production'da document storage için persistent volume, NAS veya S3 benzeri adapter gerekir.
-- SQLite tek kullanıcı/VPS için uygundur; serverless/ephemeral filesystem ortamlarında PostgreSQL gibi kalıcı veritabanı kullanılmalıdır.
+## Kullanıcıya Gösterilen Yerler
 
-## PWA ve Bildirimler
+- `/settings/system-status`: Sistem sağlığı ve bilinen sınırlamalar bölümü.
+- `/install`: PWA kurulum yönergeleri yanında “Şeffaf Kullanım Notları”.
+- Bu doküman: `docs/V3_KNOWN_LIMITATIONS.md`.
 
-- Tarayıcı bildirimleri kullanıcı iznine ve production'da HTTPS'e bağlıdır.
-- Uygulama kapalıyken kesin bildirim için ileride push, email veya cron/scheduled function gerekir.
-- Service worker app shell/offline fallback sağlar; offline veri yazma ilk sürümde garanti edilmez.
+## Operasyon Notları
 
-## Test ve Operasyon
-
-- Playwright derin veri değiştiren servis testleri yalnız `chromium-desktop` projesinde koşar; diğer projeler route, responsive, PWA ve runtime gate olarak kullanılır.
-- Yerel makinede Docker CLI yoksa Docker smoke koşulamaz. CI/staging üzerinde `docker compose config` ve `docker build` çalıştırılmalıdır.
-- Büyük PDF raporlar ve büyük banka importları için production timeout, reverse proxy body size ve persistent volume ayarları gerçek veriyle ayrıca izlenmelidir.
-
-## Güvenlik Notları
-
-- Private document download/preview route'ları auth kontrollüdür; direct filesystem path kullanıcıya gösterilmez.
-- Backup dosyaları kişisel veri, müvekkil bilgisi, finansal veri ve belge metadata'sı içerebilir.
-- Gizlilik modu ekran paylaşımı için yardımcıdır; veri güvenliği yerine geçmez.
+- Gerçek production kullanımından önce `docs/V3_BACKUP_RESTORE_DRILL.md` ve `docs/V3_DOCKER_STAGING_SMOKE_TEST.md` gözden geçirilmelidir.
+- Banka PDF importlarında düşük güven uyarısı kullanıcıya açıkça gösterilmelidir.
+- CSV/XLSX import, yedekleme ve restore dry-run düzenli aralıklarla test edilmelidir.
+- Gizlilik modu ekran paylaşımı için yardımcıdır; auth, private storage ve backup güvenliği yerine geçmez.

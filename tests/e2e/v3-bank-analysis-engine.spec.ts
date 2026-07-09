@@ -192,19 +192,23 @@ test.describe("V3 deterministic bank analysis engine", () => {
       await prisma.bankStatementRow.createMany({
         data: [
           row(user!.id, importId, 1, "2026-01-05", `KIRA E2E ${stamp} ofis`, "OUT", -10000),
-          row(user!.id, importId, 2, "2026-02-05", `KIRA E2E ${stamp} ofis`, "OUT", -10000),
-          row(user!.id, importId, 3, "2026-03-05", `KIRA E2E ${stamp} ofis`, "OUT", -10000),
-          row(user!.id, importId, 4, "2026-04-05", `KIRA E2E ${stamp} ofis`, "OUT", -10000),
+          row(user!.id, importId, 2, "2026-02-05", `OFİS KİRASI KIRA E2E ${stamp}`, "OUT", -10300),
+          row(user!.id, importId, 3, "2026-03-05", `OFFICE RENT KIRA E2E ${stamp}`, "OUT", -9800),
+          row(user!.id, importId, 4, "2026-04-05", `DÜKKAN KİRASI KIRA E2E ${stamp}`, "OUT", -10100),
           row(user!.id, importId, 5, "2026-04-08", `VERGI E2E ${stamp} KDV`, "OUT", -40000),
           row(user!.id, importId, 6, "2026-04-10", `Müvekkil vekalet ${stamp}`, "IN", 50000)
         ]
       });
 
       const analysis = await getBankAnalysisScreenData({ userId: user!.id, importId, page: 1, pageSize: 50 });
-      expect(analysis.summary.totalOut).toBe(80000);
+      expect(analysis.summary.totalOut).toBe(80200);
       expect(analysis.summary.totalIn).toBe(50000);
       expect(analysis.summary.highConfidenceSuggestions).toBeGreaterThanOrEqual(5);
-      expect(analysis.recurring.expense.some((item) => item.category === `Kira E2E ${stamp}` && item.count === 4)).toBeTruthy();
+      const recurringRent = analysis.recurring.expense.find((item) => item.category === `Kira E2E ${stamp}`);
+      expect(recurringRent?.count).toBe(4);
+      expect(recurringRent?.total).toBe(40200);
+      expect(recurringRent?.frequency).toBe("MONTHLY");
+      expect(recurringRent?.confidence).toBeGreaterThanOrEqual(0.8);
       expect(analysis.largeTransactions.expense[0].amount).toBe(40000);
       expect(analysis.largeTransactions.expense[0].category).toBe(`Vergi E2E ${stamp}`);
 

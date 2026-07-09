@@ -101,8 +101,8 @@ export default async function MissingDocumentsPage() {
             {
               header: "İşlem",
               cell: (row) => (
-                <div className="flex justify-end">
-                  <Link href={row.detailHref} className="secondary-action min-h-10 px-3">
+                <div className="flex min-w-0 justify-end">
+                  <Link href={row.detailHref} className="secondary-action min-h-11 px-4 text-sm leading-none">
                     Görüntüle
                   </Link>
                 </div>

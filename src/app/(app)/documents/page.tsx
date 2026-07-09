@@ -244,26 +244,26 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
               ))}
             </select>
           </label>
-          <div className="flex items-end gap-2 xl:col-span-4">
-            <button type="submit" className="primary-action h-10 flex-1 xl:flex-none">
+          <div className="flex min-w-0 flex-wrap items-end gap-2 xl:col-span-4">
+            <button type="submit" className="primary-action min-h-11 flex-1 px-4 text-sm leading-none xl:flex-none">
               <Filter className="h-4 w-4" aria-hidden />
               Filtrele
             </button>
-            <Link href="/documents" className="secondary-action h-10 flex-1 xl:flex-none">
+            <Link href="/documents" className="secondary-action min-h-11 flex-1 px-4 text-sm leading-none xl:flex-none">
               <RotateCcw className="h-4 w-4" aria-hidden />
               Temizle
             </Link>
             <div className="ml-auto hidden rounded-2xl border border-slate-200 bg-white p-1 md:flex">
               <Link
                 href={documentsHref(filterValues, { view: "cards" })}
-                className={cn("secondary-action h-9 border-0 px-3 shadow-none", view === "cards" ? "bg-slate-950 text-white hover:bg-slate-900" : "")}
+                className={cn("secondary-action min-h-11 border-0 px-4 text-sm leading-none shadow-none", view === "cards" ? "bg-slate-950 text-white hover:bg-slate-900" : "")}
               >
                 <Grid2X2 className="h-4 w-4" aria-hidden />
                 Kart
               </Link>
               <Link
                 href={documentsHref(filterValues, { view: "table" })}
-                className={cn("secondary-action h-9 border-0 px-3 shadow-none", view === "table" ? "bg-slate-950 text-white hover:bg-slate-900" : "")}
+                className={cn("secondary-action min-h-11 border-0 px-4 text-sm leading-none shadow-none", view === "table" ? "bg-slate-950 text-white hover:bg-slate-900" : "")}
               >
                 <Table2 className="h-4 w-4" aria-hidden />
                 Tablo
@@ -490,16 +490,16 @@ function DocumentCard({ document }: { document: DocumentListItem }) {
 
 function DocumentActions({ documentId }: { documentId: string }) {
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Link href={`/documents/${documentId}`} className="secondary-action min-h-9 px-3">
+    <div className="flex min-w-0 flex-wrap justify-end gap-2">
+      <Link href={`/documents/${documentId}`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Eye className="h-4 w-4" aria-hidden />
         Önizle
       </Link>
-      <Link href={`/documents/${documentId}/edit`} className="secondary-action min-h-9 px-3">
+      <Link href={`/documents/${documentId}/edit`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Pencil className="h-4 w-4" aria-hidden />
         Düzenle
       </Link>
-      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-9 px-3">
+      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Download className="h-4 w-4" aria-hidden />
         İndir
       </Link>

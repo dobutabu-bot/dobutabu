@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BellRing, FileText, HandCoins, LogOut, Menu, Plus, ReceiptText, X } from "lucide-react";
+import { BellRing, FileText, HandCoins, Landmark, LogOut, Menu, PiggyBank, Plus, ReceiptText, UploadCloud, X } from "lucide-react";
 
 import { BrowserNotificationManager } from "@/components/browser-notification-manager";
 import { GlobalSearch } from "@/components/search/global-search";
@@ -17,6 +17,11 @@ import { cn } from "@/lib/utils";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+}
+
+function pageReadyTestId(pathname: string) {
+  const slug = pathname.replace(/^\/+/, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "root";
+  return `page-ready-${slug}`;
 }
 
 type AppShellProps = {
@@ -124,12 +129,12 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_14px_42px_rgba(15,23,42,0.06)] backdrop-blur-2xl lg:px-8 lg:pt-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-slate-500">{firmName}</p>
               <h1 className="truncate text-lg font-semibold text-slate-950">{currentLabel}</h1>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
               <GlobalSearch />
               <PrivacyModeToggle />
               <NotificationCenter items={liveReminderNotifications} />
@@ -151,7 +156,10 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
           </div>
         </header>
 
-        <main className="px-4 py-5 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-8 lg:pb-8">
+        <main
+          className="px-4 py-5 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-8 lg:pb-8"
+          data-testid={hydratedPathname ? pageReadyTestId(hydratedPathname) : undefined}
+        >
           {children}
         </main>
       </div>
@@ -244,36 +252,41 @@ function MobileQuickActions({
   const actions = [
     { href: "/collections?create=1", label: "Tahsilat Ekle", icon: HandCoins, tone: "green" },
     { href: "/expenses?create=1", label: "Gider Ekle", icon: ReceiptText, tone: "rose" },
+    { href: "/documents/new", label: "Belge Yükle", icon: UploadCloud, tone: "blue" },
+    { href: "/bank-statements/import", label: "Banka Ekstresi", icon: Landmark, tone: "blue" },
+    { href: "/capital/assets?create=1", label: "Sermaye Varlığı", icon: PiggyBank, tone: "neutral" },
     { href: "/reminders?create=1", label: "Hatırlatma Ekle", icon: BellRing, tone: "amber" }
   ] as const;
 
   return (
     <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-40 lg:hidden">
       {open ? (
-        <div className="mb-3 w-[min(18rem,calc(100vw-2rem))] rounded-3xl border border-white/70 bg-white/90 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur-2xl">
+        <div className="mb-3 w-[min(19rem,calc(100vw-2rem))] rounded-3xl border border-white/70 bg-white/90 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur-2xl">
           <div className="px-2 pb-1 pt-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hızlı kayıt</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hızlı işlem</p>
           </div>
-          <div className="grid gap-1.5">
+          <div className="scroll-y-stable grid max-h-[min(70vh,26rem)] gap-1.5 pr-1">
             {actions.map((action) => {
               const Icon = action.icon;
               return (
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-800 transition active:bg-slate-100"
+                  className="flex min-h-12 min-w-0 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-800 transition active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10"
                 >
                   <span
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-2xl text-white shadow-[0_12px_26px_rgba(15,23,42,0.16)]",
                       action.tone === "green" && "bg-emerald-700",
                       action.tone === "rose" && "bg-rose-700",
-                      action.tone === "amber" && "bg-amber-600"
+                      action.tone === "amber" && "bg-amber-600",
+                      action.tone === "blue" && "bg-blue-700",
+                      action.tone === "neutral" && "bg-slate-950"
                     )}
                   >
                     <Icon className="h-4 w-4" aria-hidden />
                   </span>
-                  {action.label}
+                  <span className="min-w-0 truncate">{action.label}</span>
                 </Link>
               );
             })}

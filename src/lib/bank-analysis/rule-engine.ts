@@ -51,6 +51,12 @@ export type ClassificationCandidate = {
 
 type RuleClassificationCandidate = ClassificationCandidate & {
   priorityIndex: number;
+  sourceRank: 0;
+};
+
+type RankedClassificationCandidate = ClassificationCandidate & {
+  priorityIndex?: number;
+  sourceRank: 0 | 1 | 2;
 };
 
 export type DeterministicClassification = ClassificationCandidate & {
@@ -146,9 +152,14 @@ export function classifyTransactionDeterministically(
     .filter((candidate): candidate is RuleClassificationCandidate => candidate != null);
   const keywordCandidates = buildKeywordCandidates(input, description, iban, counterparty, categoryMap);
   const fallback = buildFallbackCandidate(input);
-  const candidatesWithPriority: Array<ClassificationCandidate & { priorityIndex?: number }> = [...userCandidates, ...keywordCandidates, fallback];
+  const rankedKeywordCandidates: RankedClassificationCandidate[] = keywordCandidates.map((candidate) => ({
+    ...candidate,
+    sourceRank: 1
+  }));
+  const rankedFallback: RankedClassificationCandidate = { ...fallback, sourceRank: 2 };
+  const candidatesWithPriority: RankedClassificationCandidate[] = [...userCandidates, ...rankedKeywordCandidates, rankedFallback];
   const candidates = candidatesWithPriority
-    .sort((a, b) => b.confidence - a.confidence || (a.priorityIndex ?? 9999) - (b.priorityIndex ?? 9999))
+    .sort((a, b) => a.sourceRank - b.sourceRank || (a.priorityIndex ?? 9999) - (b.priorityIndex ?? 9999) || b.confidence - a.confidence)
     .map((candidate) => stripPriority(candidate));
   const winner = candidates[0] ?? fallback;
 
@@ -234,7 +245,8 @@ function buildRuleCandidate(
     caseFileId: rule.caseFileId ?? null,
     cashAccountId: rule.cashAccountId ?? null,
     matchedSignals: signals,
-    priorityIndex
+    priorityIndex,
+    sourceRank: 0
   };
 }
 
@@ -347,9 +359,10 @@ function buildFallbackCandidate(input: DeterministicCategorizeInput): Classifica
   };
 }
 
-function stripPriority(candidate: ClassificationCandidate & { priorityIndex?: number }): ClassificationCandidate {
-  const { priorityIndex, ...rest } = candidate;
+function stripPriority(candidate: RankedClassificationCandidate): ClassificationCandidate {
+  const { priorityIndex, sourceRank, ...rest } = candidate;
   void priorityIndex;
+  void sourceRank;
   return rest;
 }
 

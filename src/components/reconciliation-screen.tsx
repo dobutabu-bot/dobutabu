@@ -28,17 +28,17 @@ export function ReconciliationScreen({
   const basePath = selectedImportId ? `/bank-statements/${selectedImportId}/reconciliation` : "/reconciliation";
 
   return (
-    <div className="space-y-5">
+    <div className="w-full max-w-full min-w-0 space-y-5">
       <section className="surface-dark p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">V3 Mutabakat Merkezi</p>
             <h1 className="mt-2 text-2xl font-semibold text-white">Banka - Dijital Kasa Mutabakatı</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
               Banka hareketlerini dijital kasa, tahsilat ve gider kayıtlarıyla karşılaştırın. Otomatik öneriler kalıcı işlem yapmaz; eşleştirme sadece onaydan sonra yazılır.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <AutoMatchButton />
             <a href="#manual-match" className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
               Manuel eşleştirme
@@ -47,14 +47,14 @@ export function ReconciliationScreen({
         </div>
 
         {data.selectedImport ? (
-          <div className="mt-5 rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-sm text-slate-200">
+          <div className="mt-5 min-w-0 rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-sm text-slate-200 [overflow-wrap:anywhere]">
             <span className="font-semibold text-white">{data.selectedImport.bankName}</span> · {data.selectedImport.originalFileName} ·{" "}
             {data.selectedImport.cashAccount?.name ?? "Kasa seçilmedi"}
           </div>
         ) : null}
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Metric label="Banka Bakiyesi" value={<AmountText value={data.balances.bankBalance} currency={data.balances.currency} showSign={false} size="md" variant="strong" />} icon={<Landmark className="h-4 w-4" aria-hidden />} />
         <Metric label="Sistem Kasa Bakiyesi" value={<AmountText value={data.balances.systemBalance} currency={data.balances.currency} showSign={false} size="md" variant="strong" />} icon={<Scale className="h-4 w-4" aria-hidden />} />
         <Metric label="Fark" value={<AmountText value={data.balances.difference} currency={data.balances.currency} showSign size="md" variant="strong" />} icon={<SearchCheck className="h-4 w-4" aria-hidden />} tone={data.balances.tone} />
@@ -66,15 +66,15 @@ export function ReconciliationScreen({
       </section>
 
       {!selectedImportId && data.imports.length > 0 ? (
-        <section className="surface p-4">
+        <section className="surface min-w-0 p-4">
           <h2 className="text-sm font-semibold text-slate-950">Ekstre Seç</h2>
           <p className="mt-1 text-xs text-slate-500">Belirli bir ekstreden mutabakat yapmak için import seçebilirsiniz.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/reconciliation" className="secondary-action min-h-10 px-3">
+          <div className="mt-3 flex min-w-0 flex-wrap gap-2">
+            <Link href="/reconciliation" className="secondary-action min-h-11 px-4 text-sm leading-none">
               Tüm ekstreler
             </Link>
             {data.imports.slice(0, 12).map((item) => (
-              <Link key={item.id} href={`/bank-statements/${item.id}/reconciliation`} className="secondary-action min-h-10 px-3">
+              <Link key={item.id} href={`/bank-statements/${item.id}/reconciliation`} className="secondary-action min-h-11 px-4 text-sm leading-none">
                 {item.bankName}
               </Link>
             ))}
@@ -90,10 +90,10 @@ export function ReconciliationScreen({
         {data.suggestions.length === 0 ? (
           <EmptyState title="Muhtemel eşleşme yok" description="Aynı tutar ve tarih toleransına uyan güvenli bir öneri bulunmadı." />
         ) : (
-          <div className="grid gap-3">
+          <div className="grid min-w-0 gap-3">
             {data.suggestions.map((suggestion) => (
-              <article key={`${suggestion.bankRowId}-${suggestion.systemEntryId}`} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
-                <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+              <article key={`${suggestion.bankRowId}-${suggestion.systemEntryId}`} className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+                <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
                   <MovementBox
                     title="Banka hareketi"
                     date={suggestion.bankDate}
@@ -115,10 +115,10 @@ export function ReconciliationScreen({
                   />
                 </div>
                 <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <p className="text-xs leading-5 text-slate-500">
+                  <p className="min-w-0 break-words text-xs leading-5 text-slate-500 [overflow-wrap:anywhere]">
                     Tarih farkı: {suggestion.dateDiffDays} gün · {suggestion.reasons.join(", ")}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex min-w-0 flex-wrap gap-2">
                     <ReconciliationActionButton
                       endpoint="/api/reconciliation/match"
                       payload={{ bankRowId: suggestion.bankRowId, targetType: "LEDGER", targetId: suggestion.systemEntryId, matchMode: "AUTO_MATCHED" }}
@@ -147,7 +147,7 @@ export function ReconciliationScreen({
         <ManualReconciliationForm bankRows={data.manualOptions.bankRows} systemMovements={data.manualOptions.systemMovements} />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid min-w-0 gap-4 xl:grid-cols-2">
         <ListPanel title="Eşleşmemiş Banka Hareketleri" description="Bu hareketlerden tahsilat/gider oluşturabilir, mevcut kayıtla eşleştirebilir veya yoksayabilirsiniz.">
           <DataTable
             rows={data.unmatchedBankRows}
@@ -183,7 +183,7 @@ export function ReconciliationScreen({
         </ListPanel>
       </section>
 
-      <section className="surface p-4">
+      <section className="surface min-w-0 p-4">
         <div className="mb-3">
           <h2 className="text-sm font-semibold text-slate-950">Eşleştirilmiş Hareketler</h2>
           <p className="mt-1 text-xs text-slate-500">Eşleşme kilitli kabul edilir; gerektiğinde bağlantı kaldırılabilir.</p>
@@ -226,9 +226,9 @@ function Metric({
   tone?: "green" | "rose" | "amber" | "neutral";
 }) {
   return (
-    <article className="surface p-4">
+    <article className="surface min-w-0 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium uppercase text-slate-500">{label}</p>
+        <p className="min-w-0 break-words text-xs font-medium uppercase text-slate-500">{label}</p>
         <span className={toneClass(tone)}>{icon}</span>
       </div>
       <div className="mt-2 text-lg font-semibold text-slate-950 tabular-nums">{value}</div>
@@ -250,10 +250,10 @@ function MovementBox({
   currency: string;
 }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-3">
+    <div className="min-w-0 rounded-2xl bg-slate-50 p-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{title}</p>
       <p className="mt-1 text-xs text-slate-500">{date ? formatDate(date) : "-"}</p>
-      <p className="mt-2 line-clamp-2 text-sm font-medium text-slate-900">{description}</p>
+      <p className="mt-2 line-clamp-2 min-w-0 break-words text-sm font-medium text-slate-900 [overflow-wrap:anywhere]">{description}</p>
       <div className="mt-2">
         <AmountText value={amount} currency={currency} showSign size="sm" variant="strong" />
       </div>
@@ -263,7 +263,7 @@ function MovementBox({
 
 function ListPanel({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <section className="surface min-w-0 p-4">
+    <section className="surface w-full max-w-full min-w-0 p-4">
       <div className="mb-3">
         <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
         <p className="mt-1 text-xs text-slate-500">{description}</p>
@@ -276,14 +276,14 @@ function ListPanel({ title, description, children }: { title: string; descriptio
 function Pagination({ basePath, page, totalPages }: { basePath: string; page: number; totalPages: number }) {
   if (totalPages <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-between gap-3">
-      <Link href={`${basePath}?page=${Math.max(1, page - 1)}`} className={cn("secondary-action min-h-10", page <= 1 && "pointer-events-none opacity-50")}>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <Link href={`${basePath}?page=${Math.max(1, page - 1)}`} className={cn("secondary-action min-h-[44px] px-4 text-sm leading-none", page <= 1 && "pointer-events-none opacity-50")}>
         Önceki
       </Link>
       <span className="text-sm font-medium text-slate-600">
         {page} / {totalPages}
       </span>
-      <Link href={`${basePath}?page=${Math.min(totalPages, page + 1)}`} className={cn("secondary-action min-h-10", page >= totalPages && "pointer-events-none opacity-50")}>
+      <Link href={`${basePath}?page=${Math.min(totalPages, page + 1)}`} className={cn("secondary-action min-h-[44px] px-4 text-sm leading-none", page >= totalPages && "pointer-events-none opacity-50")}>
         Sonraki
         <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>

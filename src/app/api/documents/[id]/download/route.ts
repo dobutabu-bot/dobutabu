@@ -25,7 +25,19 @@ export async function GET(_request: Request, { params }: DocumentDownloadRoutePr
     notFound();
   }
 
-  const buffer = await readPrivateDocumentFile(document.storagePath);
+  let buffer: Buffer;
+
+  try {
+    buffer = await readPrivateDocumentFile(document.storagePath);
+  } catch {
+    return Response.json(
+      { message: "Belge dosyası storage alanında bulunamadı. Yedek/restore veya storage eşleşmesini kontrol edin." },
+      {
+        status: 404,
+        headers: withSensitiveDataHeaders()
+      }
+    );
+  }
 
   return new Response(new Uint8Array(buffer), {
     headers: withSensitiveDataHeaders({

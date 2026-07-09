@@ -90,16 +90,16 @@ export default async function BankStatementsPage() {
             {
               header: "İşlem",
               cell: (row) => (
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  <Link href={`/bank-statements/${row.id}/analysis`} className="secondary-action min-h-10 px-3">
+                <div className="flex min-w-0 flex-wrap justify-end gap-2">
+                  <Link href={`/bank-statements/${row.id}/analysis`} className="secondary-action min-h-11 px-4 text-sm leading-none">
                     <BarChart3 className="h-4 w-4" aria-hidden />
                     Son 12 Ay
                   </Link>
-                  <Link href={`/bank-statements/${row.id}/reconciliation`} className="secondary-action min-h-10 px-3">
+                  <Link href={`/bank-statements/${row.id}/reconciliation`} className="secondary-action min-h-11 px-4 text-sm leading-none">
                     <SearchCheck className="h-4 w-4" aria-hidden />
                     Mutabakat
                   </Link>
-                  <Link href={`/bank-statements/${row.id}`} className="secondary-action min-h-10 px-3">
+                  <Link href={`/bank-statements/${row.id}`} className="secondary-action min-h-11 px-4 text-sm leading-none">
                     <ArrowRight className="h-4 w-4" aria-hidden />
                     Detay
                   </Link>

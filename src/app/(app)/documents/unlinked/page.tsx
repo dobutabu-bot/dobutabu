@@ -120,16 +120,16 @@ export default async function UnlinkedDocumentsPage() {
 
 function DocumentActions({ documentId }: { documentId: string }) {
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Link href={`/documents/${documentId}`} className="secondary-action min-h-9 px-3">
+    <div className="flex min-w-0 flex-wrap justify-end gap-2">
+      <Link href={`/documents/${documentId}`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Eye className="h-4 w-4" aria-hidden />
         Önizle
       </Link>
-      <Link href={`/documents/${documentId}/edit`} className="secondary-action min-h-9 px-3">
+      <Link href={`/documents/${documentId}/edit`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Pencil className="h-4 w-4" aria-hidden />
         Bağla / Düzenle
       </Link>
-      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-9 px-3">
+      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Download className="h-4 w-4" aria-hidden />
         İndir
       </Link>

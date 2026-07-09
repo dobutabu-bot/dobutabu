@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${STAGING_POSTGRES_DB:-buro_finans_staging}
+      POSTGRES_USER: ${STAGING_POSTGRES_USER:-buro_finans}
+      POSTGRES_PASSWORD: ${STAGING_POSTGRES_PASSWORD:-change-this-staging-postgres-password}
+    volumes:
+      - staging-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  app:
+    env_file:
+      - .env.staging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PLAYWRIGHT_E2E: "1"
+      APP_URL: ${STAGING_APP_URL:-https://localhost}
+      DATABASE_URL: ${STAGING_DATABASE_URL:-file:/data/staging.db}
+      AUTH_SECRET: ${STAGING_AUTH_SECRET:-staging-auth-secret-change-me-32chars-minimum}
+      SESSION_SECRET: ${STAGING_SESSION_SECRET:-staging-session-secret-change-me-32chars}
+      ADMIN_EMAIL: ${STAGING_ADMIN_EMAIL:-avukat@example.com}
+      ADMIN_PASSWORD: ${STAGING_ADMIN_PASSWORD:-DemoAvukat2026!}
+      DOCUMENT_STORAGE_DIR: /app/storage/documents
+      BACKUP_DIR: /app/backups
+      DOCUMENT_MAX_UPLOAD_SIZE_MB: ${STAGING_DOCUMENT_MAX_UPLOAD_SIZE_MB:-20}
+    volumes:
+      - staging-sqlite-data:/data
+      - staging-private-documents:/app/storage/documents
+      - staging-backups:/app/backups
+    expose:
+      - "3000"
+    command: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm run start -- -H 0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'x-forwarded-proto':'https'}}).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 8
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ":80"
+    ports:
+      - "3000:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - staging-caddy-data:/data
+      - staging-caddy-config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  staging-sqlite-data:
+  staging-private-documents:
+  staging-backups:
+  staging-postgres-data:
+  staging-caddy-data:
+  staging-caddy-config:

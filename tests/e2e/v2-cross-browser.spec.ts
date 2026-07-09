@@ -7,6 +7,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const TEST_EMAIL = process.env.ADMIN_EMAIL ?? "avukat@example.com";
 const TEST_PASSWORD = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
+const TEST_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3006";
 
 const protectedRoutes = [
   "/dashboard",
@@ -105,6 +106,7 @@ test.describe("V2 digital cash E2E flow", () => {
 
     const seed = await getSeedContext();
     await cleanupE2eReminders(seed.userId);
+    await cleanupE2eFinanceRecords(seed.userId);
     const beforeBalance = await getAccountBalance(seed.userId, seed.cashAccountId);
     const stamp = Date.now().toString();
     const today = dateInputValue();
@@ -232,6 +234,7 @@ async function login(page: Page, verifyLoginApi: boolean) {
   expect(user, `Seed kullanıcısı bulunamadı: ${TEST_EMAIL}`).toBeTruthy();
   await setSessionCookie(page, user!.id);
   await gotoRoute(page, "/dashboard");
+  await waitForBodyText(page, "Dijital Kasa");
   await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
 }
 
@@ -239,22 +242,47 @@ async function gotoRoute(page: Page, route: string) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       await page.goto(route, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
-      if (isExpectedPath(page.url(), route)) return;
+      await page.waitForURL((url) => isExpectedPath(url.toString(), route), { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await waitForRouteReady(page);
+      await waitForClientRouteSettled(page);
+      return;
     } catch (error) {
       const message = String(error);
-      const retryable =
-        message.includes("ERR_ABORTED") ||
-        message.includes("NS_BINDING_ABORTED") ||
-        message.includes("interrupted by another navigation") ||
-        message.includes("frame was detached");
-      if (!retryable || attempt === 2) {
+      if (!isRetryableNavigationError(message) || attempt === 2) {
         throw error;
       }
     }
-
-    await page.waitForTimeout(200);
   }
+}
+
+async function waitForRouteReady(page: Page) {
+  await expect(page.locator("body")).toBeVisible();
+  const path = new URL(page.url()).pathname;
+
+  if (path === "/offline.html") {
+    await expect(page.getByText("İnternet bağlantısı yok. Veriler güncellenemeyebilir.")).toBeVisible();
+    return;
+  }
+
+  if (path === "/login") {
+    await expect(page.getByTestId("page-ready-login")).toBeVisible();
+    return;
+  }
+
+  if (path === "/install") {
+    await expect(page.getByTestId("page-ready-install")).toBeVisible();
+    return;
+  }
+
+  await expect(page.getByTestId(pageReadyTestId(path))).toBeVisible();
+}
+
+async function waitForClientRouteSettled(page: Page) {
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
+}
+
+async function waitForBodyText(page: Page, text: string) {
+  await expect(page.locator("body")).toContainText(text, { timeout: 30_000 });
 }
 
 function isExpectedPath(url: string, route: string) {
@@ -263,12 +291,27 @@ function isExpectedPath(url: string, route: string) {
   return path === route;
 }
 
+function pageReadyTestId(pathname: string) {
+  const slug = pathname.replace(/^\/+/, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "root";
+  return `page-ready-${slug}`;
+}
+
+function isRetryableNavigationError(message: string) {
+  return (
+    message.includes("ERR_ABORTED") ||
+    message.includes("NS_BINDING_ABORTED") ||
+    message.includes("interrupted by another navigation") ||
+    message.includes("Execution context was destroyed") ||
+    message.includes("frame was detached")
+  );
+}
+
 async function setSessionCookie(page: Page, userId: string) {
   await page.context().addCookies([
     {
       name: "hukuk_finans_session",
       value: createSessionTokenForTest(userId),
-      url: new URL("/", page.url()).toString(),
+      url: new URL("/", TEST_BASE_URL).toString(),
       httpOnly: true,
       sameSite: "Lax",
       expires: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30
@@ -299,37 +342,43 @@ async function assertPageHealthy(page: Page) {
 }
 
 async function expectVisibleText(page: Page, text: string) {
-  await expect
-    .poll(
-      async () =>
-        page.getByText(text).evaluateAll((nodes) =>
-          nodes.some((node) => {
-            const element = node as HTMLElement;
-            const rect = element.getBoundingClientRect();
-            const style = window.getComputedStyle(element);
-            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-          })
-        ),
-      { message: `"${text}" metni görünür olmalı` }
-    )
-    .toBe(true);
+  await expect(page.getByText(text).first(), `"${text}" metni görünür olmalı`).toBeVisible();
 }
 
 async function assertNoHorizontalOverflow(page: Page) {
-  const metrics = await page.evaluate(() => {
-    const root = document.documentElement;
-    const body = document.body;
-    const scrollWidth = Math.max(root.scrollWidth, body.scrollWidth);
-    return {
-      viewportWidth: window.innerWidth,
-      scrollWidth,
-      overflow: scrollWidth - window.innerWidth,
-      path: window.location.pathname
-    };
-  });
+  const metrics = await evaluateHorizontalOverflow(page);
 
   const tolerance = metrics.viewportWidth <= 900 ? 24 : 8;
   expect(metrics.overflow, `${metrics.path} yatay taşma üretti: ${metrics.scrollWidth}px > ${metrics.viewportWidth}px`).toBeLessThanOrEqual(tolerance);
+}
+
+async function evaluateHorizontalOverflow(page: Page) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await waitForRouteReady(page);
+      return await page.evaluate(() => {
+        const root = document.documentElement;
+        const body = document.body;
+        const scrollWidth = Math.max(root.scrollWidth, body.scrollWidth);
+        return {
+          viewportWidth: window.innerWidth,
+          scrollWidth,
+          overflow: scrollWidth - window.innerWidth,
+          path: window.location.pathname
+        };
+      });
+    } catch (error) {
+      const message = String(error);
+      if (!isRetryableNavigationError(message) || attempt === 2) throw error;
+    }
+  }
+
+  return {
+    viewportWidth: 0,
+    scrollWidth: 0,
+    overflow: 0,
+    path: page.url()
+  };
 }
 
 function isIgnorableConsoleError(text: string) {
@@ -337,23 +386,36 @@ function isIgnorableConsoleError(text: string) {
 }
 
 async function assertChartsStayInsideViewport(page: Page) {
-  await page.waitForTimeout(300);
-  const overflowingCharts = await page.locator(".recharts-wrapper, .recharts-responsive-container").evaluateAll((nodes) =>
-    nodes
-      .filter((node) => {
-        const style = window.getComputedStyle(node);
-        if (style.display === "none" || style.visibility === "hidden") return false;
-        const rect = node.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return false;
-        return rect.left < -4 || rect.right > window.innerWidth + 4;
-      })
-      .map((node) => {
-        const rect = node.getBoundingClientRect();
-        return `${node.className}: left=${rect.left}, right=${rect.right}, viewport=${window.innerWidth}`;
-      })
-  );
+  const overflowingCharts = await evaluateChartOverflow(page);
 
   expect(overflowingCharts, `Grafik container dışına taştı:\n${overflowingCharts.join("\n")}`).toEqual([]);
+}
+
+async function evaluateChartOverflow(page: Page) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await waitForRouteReady(page);
+      return await page.locator(".recharts-wrapper, .recharts-responsive-container").evaluateAll((nodes) =>
+        nodes
+          .filter((node) => {
+            const style = window.getComputedStyle(node);
+            if (style.display === "none" || style.visibility === "hidden") return false;
+            const rect = node.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return false;
+            return rect.left < -4 || rect.right > window.innerWidth + 4;
+          })
+          .map((node) => {
+            const rect = node.getBoundingClientRect();
+            return `${node.className}: left=${rect.left}, right=${rect.right}, viewport=${window.innerWidth}`;
+          })
+      );
+    } catch (error) {
+      const message = String(error);
+      if (!isRetryableNavigationError(message) || attempt === 2) throw error;
+    }
+  }
+
+  return [];
 }
 
 async function assertTouchTargets(page: Page) {
@@ -377,7 +439,7 @@ async function evaluateTouchTargets(page: Page) {
             const rect = element.getBoundingClientRect();
             if (style.display === "none" || style.visibility === "hidden") return false;
             if (rect.width === 0 || rect.height === 0) return false;
-            return rect.width < 40 || rect.height < 40;
+            return rect.width < 44 || rect.height < 44;
           })
           .slice(0, 5)
           .map((element) => {
@@ -388,10 +450,8 @@ async function evaluateTouchTargets(page: Page) {
       );
     } catch (error) {
       const message = String(error);
-      const retryable = message.includes("Execution context was destroyed") || message.includes("frame was detached");
-      if (!retryable || attempt === 2) throw error;
-      await page.waitForLoadState("domcontentloaded").catch(() => undefined);
-      await page.waitForTimeout(150);
+      if (!isRetryableNavigationError(message) || attempt === 2) throw error;
+      await waitForRouteReady(page).catch(() => undefined);
     }
   }
 
@@ -407,6 +467,47 @@ async function cleanupE2eReminders(userId: string) {
   });
 }
 
+async function cleanupE2eFinanceRecords(userId: string) {
+  const [incomes, expenses] = await Promise.all([
+    prisma.income.findMany({
+      where: { userId, description: { startsWith: "E2E tahsilat" } },
+      select: { id: true }
+    }),
+    prisma.expense.findMany({
+      where: { userId, description: { startsWith: "E2E gider" } },
+      select: { id: true }
+    })
+  ]);
+  const incomeIds = incomes.map((income) => income.id);
+  const expenseIds = expenses.map((expense) => expense.id);
+  const deletedAt = new Date();
+
+  if (incomeIds.length === 0 && expenseIds.length === 0) {
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.cashLedgerEntry.updateMany({
+      where: {
+        userId,
+        OR: [
+          ...(incomeIds.length > 0 ? [{ incomeId: { in: incomeIds } }] : []),
+          ...(expenseIds.length > 0 ? [{ expenseId: { in: expenseIds } }] : [])
+        ]
+      },
+      data: { deletedAt }
+    }),
+    prisma.income.updateMany({
+      where: { id: { in: incomeIds }, userId },
+      data: { deletedAt }
+    }),
+    prisma.expense.updateMany({
+      where: { id: { in: expenseIds }, userId },
+      data: { deletedAt }
+    })
+  ]);
+}
+
 async function assertMobileMenuWorks(page: Page) {
   await gotoRoute(page, "/dashboard");
   await expect(page.locator('[data-app-shell-ready="true"]')).toBeVisible();
@@ -416,28 +517,20 @@ async function assertMobileMenuWorks(page: Page) {
   await moreButton.click({ force: true });
   const drawerHeading = page.getByRole("heading", { name: "Diğer modüller" });
   if (!(await drawerHeading.isVisible().catch(() => false))) {
-    await page.locator('button[aria-label="Diğer modülleri aç"]').evaluate((button) => {
-      (button as HTMLButtonElement).click();
-    });
+    await moreButton.click({ force: true });
   }
   await expect(drawerHeading).toBeVisible();
-  await page.getByRole("link", { name: /Raporlar/ }).click();
-  await expect(page).toHaveURL(/\/reports/);
+  await Promise.all([
+    page.waitForURL(/\/reports/, { waitUntil: "domcontentloaded" }),
+    page.getByRole("link", { name: /Raporlar/ }).click()
+  ]);
+  await waitForRouteReady(page);
   await expect(page.getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
 }
 
 async function postJson(page: Page, path: string, payload: Record<string, unknown>) {
-  const result = await page.evaluate(
-    async ({ path, payload }) => {
-      const response = await fetch(path, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      return { ok: response.ok, status: response.status, body: await response.text() };
-    },
-    { path, payload }
-  );
+  const response = await page.request.post(path, { data: payload });
+  const result = { ok: response.ok(), status: response.status(), body: await response.text() };
 
   expect(result.ok, `${path} başarısız oldu (${result.status}): ${result.body}`).toBeTruthy();
 }

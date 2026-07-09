@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import CashAccountsPage from "@/app/(app)/cash/accounts/page";
 
 export default function CashPage() {
-  redirect("/cash/accounts");
+  return <CashAccountsPage />;
 }

@@ -26,5 +26,5 @@
     "prisma.config.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next/types/**/* 2.ts"]
+  "exclude": ["node_modules", ".next/types/**/* 2.ts", ".next/types/**/* 3.ts", ".next/types/**/* 4.ts"]
 }

@@ -263,9 +263,11 @@ export async function createBankStatementImport(userId: string, file: File, opti
       options
     });
 
-    if (parsedRows.length > 0) {
+    const rowsToPersist = parsedRows.filter((row) => row.status !== "DUPLICATE");
+
+    if (rowsToPersist.length > 0) {
       await tx.bankStatementRow.createMany({
-        data: parsedRows.map((row) => ({
+        data: rowsToPersist.map((row) => ({
           userId,
           importId: bankImport.id,
           cashAccountId: cashAccount?.id ?? null,
