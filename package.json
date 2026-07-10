@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build && node scripts/fix-next-app-chunks.mjs",
-    "start": "next start",
+    "start": "node scripts/start-production.mjs",
     "lint": "eslint .",
     "test": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs --test tests/financial-invariants.test.ts tests/document-security.test.ts tests/bank-import-qa.test.ts tests/reconciliation-safety.test.ts tests/pdf-qa.test.ts",
     "typecheck": "tsc --noEmit",

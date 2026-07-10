@@ -9,6 +9,11 @@ outputs
 work
 .env
 .env.local
+.env.*
 npm-debug.log*
-Dockerfile
-docker-compose*.yml
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+prisma/dev.db
+coverage
