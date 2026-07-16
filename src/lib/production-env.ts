@@ -43,3 +43,7 @@ export function getAppOrigin() {
     return null;
   }
 }
+
+export function buildAppUrl(path: string, requestUrl: string, appOrigin = getAppOrigin()) {
+  return new URL(path, appOrigin || requestUrl);
+}

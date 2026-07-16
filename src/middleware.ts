@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getAppOrigin, validateProductionEnvironment } from "@/lib/production-env";
+import { buildAppUrl, getAppOrigin, validateProductionEnvironment } from "@/lib/production-env";
 import { isAllowedRequestOrigin, shouldEnforceHttpsForPath } from "@/lib/request-origin";
 import { SESSION_COOKIE } from "@/lib/session";
 
@@ -59,7 +59,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === "/login" && hasSession) {
-    return withSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    return withSecurityHeaders(NextResponse.redirect(buildAppUrl("/dashboard", request.url)));
   }
 
   return withSecurityHeaders(NextResponse.next());

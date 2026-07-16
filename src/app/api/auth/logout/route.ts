@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { SESSION_COOKIE } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/production-env";
 
 export async function POST(request: Request) {
-  const response = NextResponse.redirect(new URL("/login", request.url), { status: 303 });
+  const response = NextResponse.redirect(buildAppUrl("/login", request.url), { status: 303 });
   response.cookies.set(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
