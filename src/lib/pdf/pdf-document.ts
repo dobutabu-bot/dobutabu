@@ -110,12 +110,14 @@ function resolveFontPaths() {
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/Library/Fonts/Arial Unicode.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
   ]);
   const boldPath = firstExistingPath([
     process.env.PDF_FONT_BOLD_PATH,
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     regularPath
