@@ -15,7 +15,8 @@ Hata aylık finans, kasa, belge, banka, mutabakat, sermaye, avans ve detay PDF r
 ## Minimal düzeltme
 
 - Docker runner'a Alpine `font-dejavu` paketi eklendi.
-- Renderer Alpine font yollarını da güvenli fallback listesine aldı.
+- Renderer, Alpine paketinin gerçek `/usr/share/fonts/dejavu` dizinini ve diğer yaygın font yollarını güvenli fallback listesine aldı.
+- Docker runner, doğrulanmış düzenli ve kalın font yollarını `PDF_FONT_PATH` değişkenleriyle açıkça tanımlıyor.
 - PDF response artık `%PDF-` imzasını ve minimum anlamlı dosya boyutunu doğruluyor.
 - HTML hata gövdesinin `.pdf` uzantısıyla indirilmesini engelleyen regresyon testi eklendi.
 
