@@ -1,0 +1,46 @@
+# V5.0.1 PDF Test Matrisi
+
+## PDF route envanteri
+
+| Rapor | Route | Yerel renderer/API |
+|---|---|---|
+| Aylık finans | `/api/reports/monthly/pdf` | PASS |
+| Kasa | `/api/reports/cash/pdf` | PASS |
+| Belge | `/api/reports/documents/pdf` | PASS |
+| Banka ekstreleri | `/api/reports/bank-statements/pdf` | PASS |
+| Mutabakat | `/api/reports/reconciliation/pdf` | PASS |
+| Sermaye | `/api/reports/capital/pdf` | PASS |
+| Avans | `/api/reports/advances/pdf` | PASS |
+| Müvekkil cari | `/api/reports/client/[id]/pdf` | PASS |
+| Dosya finans | `/api/reports/case/[id]/pdf` | PASS |
+| Tahsilat özeti | `/api/reports/collections/[id]/pdf` | PASS |
+| Gider özeti | `/api/reports/expenses/[id]/pdf` | PASS |
+| Banka analizi | `/api/reports/bank-analysis/[id]/pdf` | PASS |
+
+## Zorunlu doğrulamalar
+
+Her route için aşağıdakiler birlikte aranır:
+
+- auth olmayan isteğe `401`
+- auth olan isteğe `200`
+- `Content-Type: application/pdf`
+- tarihli `.pdf` attachment dosya adı
+- `Cache-Control: private, no-store`
+- `%PDF-` imzası
+- 1.500 bayttan büyük içerik
+- PDF metninin başarıyla ayrıştırılması
+- gerçek tarayıcı download olayı
+- console error olmaması
+
+## Tarayıcı matrisi
+
+`tests/e2e/v501-pdf-downloads.spec.ts` Chromium, Firefox, WebKit/Safari ve iPhone profillerinde gerçek link tıklamasıyla 12 raporu indirir. Test kayıtları yalnız `PDF-SMOKE-TEST-*` marker'ı taşır ve test sonunda soft delete edilir.
+
+| Hedef | Yerel | Staging | Production |
+|---|---|---|---|
+| Chromium | Bekliyor | Bekliyor | Bekliyor |
+| Firefox | Bekliyor | Bekliyor | Bekliyor |
+| WebKit/Safari | Bekliyor | Bekliyor | Bekliyor |
+| iPhone profili | Bekliyor | Bekliyor | Bekliyor |
+
+Bu tablo deploy kanıtları geldikçe güncellenecektir. HTTP 200 tek başına PASS sayılmaz.
