@@ -48,3 +48,13 @@ Bu tablo deploy kanıtları geldikçe güncellenecektir. HTTP 200 tek başına P
 ## Paralel regresyon izolasyonu
 
 Uzun CRUD tarayıcı senaryoları her Playwright projesinde benzersiz marker ile çalışır. Test başlangıcında genel marker önekine göre toplu temizlik yapılmaz; böylece paralel Chromium/Firefox/WebKit projeleri birbirinin devam eden fixture kayıtlarını silemez. Her senaryo yalnız kendi marker kayıtlarını `finally` aşamasında temizler.
+
+## WebKit bildirim isteği stabilizasyonu
+
+WebKit PDF matrisi sırasında 12 PDF'nin tamamı indirilip ayrıştırıldığı halde, her tam sayfa yüklenişinde yeniden başlayan `/api/reminders/due` isteği sonraki navigasyonda Safari tarafından erişim kontrolü hatası olarak raporlanıyordu. Bildirim yöneticisi artık sunucudan gelen ilk veriyi kullanır, periyodik kontrolü korur ve anlık yenilemeyi yalnız dashboard'da gecikmeli ve iptal edilebilir biçimde yapar. Auth, PDF route'ları ve console-error kabul kriteri gevşetilmemiştir.
+
+Yerel hedefli doğrulama:
+
+- `npx playwright test tests/e2e/v501-pdf-downloads.spec.ts --project=webkit-desktop --reporter=line`: **PASS (1/1)**
+- 12 gerçek download olayı, PDF imzası, boyut ve metin ayrıştırması: **PASS**
+- WebKit console error: **0**
