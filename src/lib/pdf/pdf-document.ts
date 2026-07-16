@@ -45,7 +45,9 @@ export async function renderPdfReportToBuffer(input: PdfReportInput): Promise<Bu
   drawPdfReportLayout(doc, fonts, input);
   doc.end();
 
-  return done;
+  const buffer = await done;
+  assertValidPdfBuffer(buffer);
+  return buffer;
 }
 
 export function renderPdfReportToStream(input: PdfReportInput): ReadableStream<Uint8Array> {
@@ -78,6 +80,8 @@ export function renderPdfReportToStream(input: PdfReportInput): ReadableStream<U
 }
 
 export function pdfResponse(buffer: Buffer, filename: string) {
+  assertValidPdfBuffer(buffer);
+
   return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
@@ -106,11 +110,13 @@ function resolveFontPaths() {
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/Library/Fonts/Arial Unicode.ttf",
+    "/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
   ]);
   const boldPath = firstExistingPath([
     process.env.PDF_FONT_BOLD_PATH,
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     regularPath
   ]);
@@ -124,4 +130,10 @@ function resolveFontPaths() {
 
 function firstExistingPath(paths: Array<string | undefined>) {
   return paths.find((candidate) => candidate && fs.existsSync(candidate));
+}
+
+function assertValidPdfBuffer(buffer: Buffer) {
+  if (buffer.length < 1_000 || buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
+    throw new Error("PDF çıktısı doğrulanamadı.");
+  }
 }
