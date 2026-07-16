@@ -68,8 +68,6 @@ test.setTimeout(600_000);
     trackRscRequests(page);
 
     await mkdir(screenshotDir, { recursive: true });
-    await cleanupRuntimeRecords("FINAL-RUNTIME-TEST-");
-
     try {
       state.userId = await getAdminUserId();
       await loginThroughUi(page);
