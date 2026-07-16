@@ -44,3 +44,7 @@ Her route için aşağıdakiler birlikte aranır:
 | iPhone profili | Bekliyor | Bekliyor | Bekliyor |
 
 Bu tablo deploy kanıtları geldikçe güncellenecektir. HTTP 200 tek başına PASS sayılmaz.
+
+## Paralel regresyon izolasyonu
+
+Uzun CRUD tarayıcı senaryoları her Playwright projesinde benzersiz marker ile çalışır. Test başlangıcında genel marker önekine göre toplu temizlik yapılmaz; böylece paralel Chromium/Firefox/WebKit projeleri birbirinin devam eden fixture kayıtlarını silemez. Her senaryo yalnız kendi marker kayıtlarını `finally` aşamasında temizler.
