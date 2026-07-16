@@ -21,7 +21,9 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DOCUMENT_STORAGE_DIR=/data/documents
 
-RUN apk add --no-cache openssl
+# PDFKit needs a Unicode-capable TTF at runtime. Alpine does not ship fonts in
+# the base image, so generated reports would fail before writing a response.
+RUN apk add --no-cache openssl font-dejavu
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 COPY --from=builder /app/package.json ./package.json
