@@ -16,6 +16,7 @@ type BrowserNotificationManagerProps = {
 
 const reminderCheckIntervalMs = 10 * 60 * 1000;
 const reminderCheckThrottleMs = 30 * 1000;
+const initialReminderCheckDelayMs = 750;
 
 export function BrowserNotificationManager({ items, onNotificationsChecked }: BrowserNotificationManagerProps) {
   const pathname = usePathname();
@@ -58,7 +59,7 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
   }, [browserItems, deliverReminderItems]);
 
   const checkDueReminders = useCallback(
-    async (force = false) => {
+    async (force = false, signal?: AbortSignal) => {
       if (typeof window === "undefined") {
         return;
       }
@@ -71,7 +72,11 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
       lastCheckRef.current = now;
 
       try {
-        const response = await fetch("/api/reminders/due", { cache: "no-store" });
+        const response = await fetch("/api/reminders/due", {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal
+        });
         if (!response.ok) {
           return;
         }
@@ -97,19 +102,31 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
   }, [deliverNotifications]);
 
   useEffect(() => {
-    void checkDueReminders(true);
-
+    const controller = new AbortController();
     const interval = window.setInterval(() => {
-      void checkDueReminders(true);
+      void checkDueReminders(true, controller.signal);
     }, reminderCheckIntervalMs);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      controller.abort();
+    };
   }, [checkDueReminders]);
 
   useEffect(() => {
-    if (pathname === "/dashboard") {
-      void checkDueReminders();
+    if (pathname !== "/dashboard") {
+      return;
     }
+
+    const controller = new AbortController();
+    const dashboardCheck = window.setTimeout(() => {
+      void checkDueReminders(false, controller.signal);
+    }, initialReminderCheckDelayMs);
+
+    return () => {
+      window.clearTimeout(dashboardCheck);
+      controller.abort();
+    };
   }, [checkDueReminders, pathname]);
 
   return null;
