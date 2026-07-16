@@ -64,4 +64,4 @@ jobs:
       - name: Docker PDF runtime font smoke
         run: |
           docker run --rm --entrypoint sh buro-finans-v3-ci -c \
-            'test -r /usr/share/fonts/ttf-dejavu/DejaVuSans.ttf && test -r /usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf'
+            'test -r /usr/share/fonts/dejavu/DejaVuSans.ttf && test -r /usr/share/fonts/dejavu/DejaVuSans-Bold.ttf'
