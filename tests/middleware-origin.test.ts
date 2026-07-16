@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isAllowedRequestOrigin } from "@/lib/request-origin";
+import { isAllowedRequestOrigin, shouldEnforceHttpsForPath } from "@/lib/request-origin";
 
 test("same-origin request remains allowed", () => {
   assert.equal(isAllowedRequestOrigin({
@@ -38,4 +38,10 @@ test("production does not allow loopback aliases outside the configured allowlis
     requestOrigin: "http://127.0.0.1:3000",
     nodeEnv: "production"
   }), false);
+});
+
+test("Railway internal health probe may use HTTP without weakening other routes", () => {
+  assert.equal(shouldEnforceHttpsForPath("/api/health"), false);
+  assert.equal(shouldEnforceHttpsForPath("/dashboard"), true);
+  assert.equal(shouldEnforceHttpsForPath("/api/documents"), true);
 });

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAppOrigin, validateProductionEnvironment } from "@/lib/production-env";
-import { isAllowedRequestOrigin } from "@/lib/request-origin";
+import { isAllowedRequestOrigin, shouldEnforceHttpsForPath } from "@/lib/request-origin";
 import { SESSION_COOKIE } from "@/lib/session";
 
 const PUBLIC_PATHS = [
@@ -26,12 +26,12 @@ export function middleware(request: NextRequest) {
     return envErrorResponse;
   }
 
-  const httpsRedirect = enforceHttps(request);
+  const { pathname } = request.nextUrl;
+  const httpsRedirect = shouldEnforceHttpsForPath(pathname) ? enforceHttps(request) : null;
   if (httpsRedirect) {
     return withSecurityHeaders(httpsRedirect);
   }
 
-  const { pathname } = request.nextUrl;
   const isPublic =
     PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ||
     pathname.startsWith("/_next");

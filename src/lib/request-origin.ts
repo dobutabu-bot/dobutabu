@@ -29,6 +29,10 @@ export function isAllowedRequestOrigin({
   }
 }
 
+export function shouldEnforceHttpsForPath(pathname: string) {
+  return pathname !== "/api/health";
+}
+
 function effectivePort(url: URL) {
   return url.port || (url.protocol === "https:" ? "443" : "80");
 }
