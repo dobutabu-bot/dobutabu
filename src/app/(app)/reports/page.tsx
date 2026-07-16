@@ -12,11 +12,13 @@ import {
   TrendingUp,
   WalletCards
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import type { ReactNode } from "react";
 
 import { DataTable } from "@/components/data-table";
+import { FinancialInsightsPanel } from "@/components/financial-insights-panel";
 import { FinanceTicker } from "@/components/finance-ticker";
+import { LazyFinancialPictureChart } from "@/components/lazy-financial-picture-chart";
 import { LazyReportAnalyticsCharts } from "@/components/lazy-report-analytics-charts";
 import { MetricCard } from "@/components/metric-card";
 import { requireUser } from "@/lib/auth";
@@ -32,6 +34,7 @@ import {
   reportTypeLabels,
   type ReportFilters
 } from "@/lib/reporting";
+import { formatMoney } from "@/lib/utils";
 
 type ReportsPageProps = {
   searchParams: Promise<ReportFilters>;
@@ -79,6 +82,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const documentPdfHref = `/api/reports/documents/pdf?${pdfParams.toString()}`;
   const bankStatementPdfHref = `/api/reports/bank-statements/pdf?${pdfParams.toString()}`;
   const reconciliationPdfHref = `/api/reports/reconciliation/pdf?${pdfParams.toString()}`;
+  const exportLinks = [
+    { label: "Ana CSV", href: csvHref, tone: "secondary" },
+    { label: "Aylık PDF", href: monthlyPdfHref, tone: "secondary" },
+    { label: "Kasa PDF", href: cashPdfHref, tone: "secondary" },
+    { label: "Belge PDF", href: documentPdfHref, tone: "secondary" },
+    { label: "Banka PDF", href: bankStatementPdfHref, tone: "secondary" },
+    { label: "Mutabakat PDF", href: reconciliationPdfHref, tone: "secondary" },
+    { label: "Sermaye PDF", href: "/api/reports/capital/pdf", tone: "primary" }
+  ];
   const v3CsvHrefs = {
     documents: reportExportHref("v3Documents", filters),
     bankStatements: reportExportHref("v3BankStatements", filters),
@@ -170,10 +182,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <section className="surface-dark overflow-hidden">
         <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <p className="text-xs font-medium uppercase text-slate-400">Raporlar V2</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-5xl">Finans Analiz Merkezi</h1>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Raporlar V4</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-5xl">Dijital Finans Analiz Merkezi</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-              Dijital kasa, gelir/gider, müvekkil, dosya ve nakit akışı analizlerini tek premium panelde okuyun.
+              Dönem filtresi, KPI kartları, gelir/gider trendi, nakit akışı, kârlılık, mutabakat ve sermaye analizlerini tek panelde okuyun.
             </p>
           </div>
           <div className="digital-glass p-4 lg:min-w-80">
@@ -190,12 +202,35 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         </div>
       </section>
 
-      <section className="surface p-4">
+      <section className="surface p-3" aria-label="Rapor bölümleri">
+        <div className="scroll-x-stable flex gap-2 pb-1">
+          {[
+            ["#period-filter", "Dönem filtresi"],
+            ["#summary-kpis", "KPI"],
+            ["#financial-guidance", "Akıllı öneriler"],
+            ["#analysis-charts", "Grafikler"],
+            ["#v3-reconciliation", "Mutabakat"],
+            ["#v3-capital", "Sermaye"],
+            ["#report-exports", "Export"],
+            ["#report-tables", "Tablolar"]
+          ].map(([href, label]) => (
+            <Link
+              key={href}
+              href={href}
+              className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section id="period-filter" className="surface scroll-mt-24 p-4">
         <details className="group" open>
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-slate-50/80 px-3 text-sm font-semibold text-slate-950 marker:hidden">
             <span className="inline-flex items-center gap-2">
               <Filter className="h-4 w-4" aria-hidden />
-              Rapor filtreleri
+              Dönem filtresi
             </span>
             <span className="text-xs font-medium text-slate-500 group-open:hidden">Aç</span>
             <span className="hidden text-xs font-medium text-slate-500 group-open:inline">Kapat</span>
@@ -207,7 +242,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 key={value}
                 href={rangeHref(value, filters)}
                 className={[
-                  "inline-flex min-h-10 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition",
+                  "inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition",
                   filters.range === value
                     ? "border-slate-950 bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]"
                     : "border-white/70 bg-white/80 text-slate-700 hover:bg-white"
@@ -286,38 +321,53 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         </details>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {analytics.kpis.map((item, index) => (
-          <MetricCard
-            key={item.label}
-            title={item.label}
-            value={item.value}
-            detail={item.detail}
-            icon={kpiIcon(index)}
-            tone={item.tone}
-          />
-        ))}
+      <section id="summary-kpis" className="scroll-mt-24 space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Özet KPI</p>
+            <h2 className="text-xl font-semibold text-slate-950">Seçilen dönemin finans resmi</h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-slate-500">
+            Silinen kayıtlar dışarıda tutulur; tutarlar kasa ve rapor servislerinden server-side hazırlanır.
+          </p>
+        </div>
+        <div className="grid min-w-0 gap-4">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {analytics.kpis.map((item, index) => (
+              <MetricCard
+                key={item.label}
+                title={item.label}
+                value={item.value}
+                detail={item.detail}
+                icon={kpiIcon(index)}
+                tone={item.tone}
+              />
+            ))}
+          </div>
+          <div className="surface min-w-0 overflow-hidden p-4">
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">Finans dengesi</p>
+              <h3 className="mt-1 text-base font-semibold text-slate-950">Dönemin giriş, çıkış ve yükümlülük görünümü</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Giderler negatif eksende; açık alacak ve yükümlülükler amber renkte gösterilir.</p>
+            </div>
+            <LazyFinancialPictureChart data={safeAnalytics.financialPicture} />
+          </div>
+        </div>
       </section>
 
-      <section className="surface flex flex-col gap-3 p-4 text-sm text-slate-600 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex gap-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-          <p>PDF çıktıları server-side üretilir ve yalnızca oturumdaki kullanıcının verilerini içerir.</p>
+      <FinancialInsightsPanel insights={safeAnalytics.insights} rangeLabel={safeAnalytics.rangeLabel} />
+
+      <section id="analysis-charts" className="scroll-mt-24 space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Grafik Analizi</p>
+            <h2 className="text-xl font-semibold text-slate-950">Trend, nakit akışı, dağılım ve kârlılık</h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-slate-500">
+            Mobilde tek sütun, geniş ekranda iki kolon; boş veri durumlarında grafik alanı kontrollü empty state gösterir.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={monthlyPdfHref} className="secondary-action min-h-10 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            Aylık PDF
-          </Link>
-          <Link href={cashPdfHref} className="secondary-action min-h-10 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            Kasa PDF
-          </Link>
-          <Link href="/api/reports/capital/pdf" className="secondary-action min-h-10 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            Sermaye PDF
-          </Link>
-        </div>
+        <LazyReportAnalyticsCharts analytics={safeAnalytics} />
       </section>
 
       <ReportsV3Center
@@ -329,9 +379,29 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         csvHrefs={v3CsvHrefs}
       />
 
-      <LazyReportAnalyticsCharts analytics={safeAnalytics} />
+      <section id="report-exports" className="surface scroll-mt-24 flex flex-col gap-4 p-4 text-sm text-slate-600 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex gap-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+          <div>
+            <h2 className="text-sm font-semibold text-slate-950">PDF / CSV Export</h2>
+            <p className="mt-1 leading-6">PDF çıktıları server-side üretilir ve yalnızca oturumdaki kullanıcının verilerini içerir.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          {exportLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`${item.tone === "primary" ? "primary-action" : "secondary-action"} min-h-11 px-3`}
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section id="report-tables" className="grid scroll-mt-24 gap-4 xl:grid-cols-2">
         {analysisTables.map((table) => (
           <section key={table.title} className="min-w-0 space-y-3">
             <div>
@@ -369,11 +439,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500">{report.rows.length} satır</span>
-            <Link href={csvHref} className="secondary-action min-h-10 px-3">
+            <Link href={csvHref} className="secondary-action min-h-11 px-3">
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
             </Link>
-            <Link href={monthlyPdfHref} className="secondary-action min-h-10 px-3">
+            <Link href={monthlyPdfHref} className="secondary-action min-h-11 px-3">
               <Download className="h-4 w-4" aria-hidden />
               PDF indir
             </Link>
@@ -597,11 +667,11 @@ function V3ReportBlock({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={csvHref} className="secondary-action min-h-10 px-3">
+          <Link href={csvHref} className="secondary-action min-h-11 px-3">
             <Download className="h-4 w-4" aria-hidden />
             CSV
           </Link>
-          <Link href={pdfHref} className="primary-action min-h-10 px-3">
+          <Link href={pdfHref} className="primary-action min-h-11 px-3">
             <Download className="h-4 w-4" aria-hidden />
             PDF
           </Link>
@@ -715,8 +785,16 @@ function MonthlyCashFlowBars({ data }: { data: { label: string; tahsilat: number
         {data.map((item) => (
           <div key={item.label} className="flex w-14 shrink-0 flex-col items-center justify-end gap-1">
             <div className="flex h-32 items-end gap-1">
-              <span className="w-4 rounded-t-lg bg-emerald-500" style={{ height: `${Math.max(4, (item.tahsilat / max) * 128)}px` }} title={`Giriş ${item.tahsilat}`} />
-              <span className="w-4 rounded-t-lg bg-rose-500" style={{ height: `${Math.max(4, (item.gider / max) * 128)}px` }} title={`Çıkış ${item.gider}`} />
+              <span
+                className="w-4 rounded-t-lg bg-emerald-500"
+                style={{ height: `${Math.max(4, (item.tahsilat / max) * 128)}px` }}
+                title={`${item.label} giriş: ${formatMoney(item.tahsilat)}`}
+              />
+              <span
+                className="w-4 rounded-t-lg bg-rose-500"
+                style={{ height: `${Math.max(4, (item.gider / max) * 128)}px` }}
+                title={`${item.label} çıkış: ${formatMoney(item.gider)}`}
+              />
             </div>
             <span className="text-[11px] text-slate-500">{item.label}</span>
           </div>

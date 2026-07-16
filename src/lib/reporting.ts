@@ -31,6 +31,7 @@ import {
   endOfDateInput,
   formatDate,
   formatMoney,
+  formatSignedMoney,
   parseDateInput,
   startOfDay,
   startOfMonth,
@@ -111,6 +112,24 @@ export type ReportSeriesPoint = {
   value: number;
 };
 
+export type ReportFinancialPicturePoint = {
+  label: string;
+  value: number;
+  valueLabel: string;
+  tone: "positive" | "negative" | "attention" | "neutral";
+};
+
+export type ReportFinancialInsight = {
+  id: string;
+  category: "cash-flow" | "collection" | "spending" | "case-mix" | "investment-readiness" | "motivation";
+  title: string;
+  message: string;
+  evidence: string;
+  tone: "green" | "rose" | "amber" | "blue" | "neutral";
+  actionLabel: string;
+  actionHref: string;
+};
+
 export type ReportMonthlyTrendPoint = {
   label: string;
   tahsilat: number;
@@ -130,6 +149,8 @@ export type ReportAnalysisRow = Record<string, string>;
 export type ReportAnalytics = {
   rangeLabel: string;
   kpis: ReportKpi[];
+  financialPicture: ReportFinancialPicturePoint[];
+  insights: ReportFinancialInsight[];
   charts: {
     cashDailyFlow: ReportMonthlyTrendPoint[];
     monthlyTrend: ReportMonthlyTrendPoint[];
@@ -335,6 +356,8 @@ export async function buildReportAnalytics(userId: string, filters: ReportFilter
   ]);
   const rangeLabel = analyticsRangeLabel(normalized);
   const cashBalanceMap = new Map(cashAccountBalances.map((row) => [row.accountId, row]));
+  const financialPicture = buildFinancialPicture(summaryData);
+  const insights = buildFinancialInsights(context, summaryData, expenseCategories, rangeLabel);
 
   return {
     rangeLabel,
@@ -388,6 +411,8 @@ export async function buildReportAnalytics(userId: string, filters: ReportFilter
         tone: "amber"
       }
     ],
+    financialPicture,
+    insights,
     charts: {
       cashDailyFlow: cashReport.dailyFlow.map((point) => ({
         label: point.label,
@@ -468,6 +493,238 @@ export async function buildReportAnalytics(userId: string, filters: ReportFilter
       overdueReminders: overdueReminderAnalysis.rows
     }
   };
+}
+
+function buildFinancialPicture(summary: Awaited<ReturnType<typeof getReportSummary>>): ReportFinancialPicturePoint[] {
+  return [
+    {
+      label: "Tahsilat",
+      value: summary.totalIncome,
+      valueLabel: formatSignedMoney(summary.totalIncome),
+      tone: "positive"
+    },
+    {
+      label: "Gider",
+      value: -summary.totalExpense,
+      valueLabel: formatSignedMoney(-summary.totalExpense),
+      tone: "negative"
+    },
+    {
+      label: "Net",
+      value: summary.net,
+      valueLabel: formatSignedMoney(summary.net),
+      tone: summary.net > 0 ? "positive" : summary.net < 0 ? "negative" : "neutral"
+    },
+    {
+      label: "Açık alacak",
+      value: summary.outstandingReceivables,
+      valueLabel: formatMoney(summary.outstandingReceivables),
+      tone: summary.outstandingReceivables > 0 ? "attention" : "neutral"
+    },
+    {
+      label: "Yansıtılabilir",
+      value: summary.reimbursableExpenses,
+      valueLabel: formatMoney(summary.reimbursableExpenses),
+      tone: summary.reimbursableExpenses > 0 ? "attention" : "neutral"
+    },
+    {
+      label: "Ödenmemiş belge",
+      value: summary.unpaidInvoices,
+      valueLabel: formatMoney(summary.unpaidInvoices),
+      tone: summary.unpaidInvoices > 0 ? "attention" : "neutral"
+    }
+  ];
+}
+
+function buildFinancialInsights(
+  context: ReportContext,
+  summary: Awaited<ReturnType<typeof getReportSummary>>,
+  expenseCategories: ReportSeriesPoint[],
+  rangeLabel: string
+): ReportFinancialInsight[] {
+  const insights: ReportFinancialInsight[] = [];
+  const income = summary.totalIncome;
+  const expense = summary.totalExpense;
+  const net = summary.net;
+  const expenseRatio = income > 0 ? expense / income : expense > 0 ? 1 : 0;
+  const margin = income > 0 ? net / income : 0;
+  const collectionRatio = income > 0 ? summary.outstandingReceivables / income : summary.outstandingReceivables > 0 ? 1 : 0;
+  const topExpense = expenseCategories[0];
+  const caseSignals = caseTypeSignals(context);
+
+  if (net < 0) {
+    insights.push({
+      id: "cash-flow-negative",
+      category: "cash-flow",
+      title: "Önce nakit dengesini toparlayın",
+      message: "Seçilen dönemde giderler tahsilatı aşıyor. Yeni yatırım ayırmadan önce zorunlu olmayan çıkışları ve tahsilat takvimini gözden geçirmek daha güvenli olur.",
+      evidence: `${rangeLabel}: ${formatSignedMoney(net)} net nakit sonucu`,
+      tone: "rose",
+      actionLabel: "Giderleri incele",
+      actionHref: "/expenses"
+    });
+  } else if (income > 0) {
+    insights.push({
+      id: "cash-flow-positive",
+      category: "cash-flow",
+      title: margin >= 0.2 ? "Finansal hareket alanınız güçleniyor" : "Pozitif dengeyi kalıcı hale getirin",
+      message:
+        margin >= 0.2
+          ? "Dönem neti güçlü görünüyor. Vergi, yaklaşan ödeme ve işletme tamponunu ayırdıktan sonra kalan tutar için düzenli birikim planı oluşturmayı değerlendirin."
+          : "Dönem pozitif kapansa da marj sınırlı. Düzenli giderleri sabitlemek ve tahsilat hızını artırmak bu alanı büyütebilir.",
+      evidence: `${rangeLabel}: %${Math.round(Math.max(0, margin) * 100).toLocaleString("tr-TR")} net marj`,
+      tone: margin >= 0.2 ? "green" : "blue",
+      actionLabel: "Nakit akışını gör",
+      actionHref: "/cash/ledger"
+    });
+  }
+
+  if (summary.outstandingReceivables > 0 && (collectionRatio >= 0.25 || summary.unpaidInvoiceCount > 0)) {
+    insights.push({
+      id: "collection-focus",
+      category: "collection",
+      title: "Tahsilat hızını öne alın",
+      message: "Açık alacakların nakde dönüşmesi, yeni gelir aramadan önce en düşük riskli finansal iyileştirme alanınız olabilir. Vade ve takip notlarını netleştirin.",
+      evidence: `${formatMoney(summary.outstandingReceivables)} açık alacak · ${summary.unpaidInvoiceCount} ödenmemiş belge`,
+      tone: "amber",
+      actionLabel: "Tahsilatları aç",
+      actionHref: "/collections"
+    });
+  }
+
+  if (expenseRatio >= 0.65 && expense > 0) {
+    insights.push({
+      id: "spending-ratio",
+      category: "spending",
+      title: "Gider oranı yakın takip istiyor",
+      message: topExpense
+        ? `${topExpense.label} seçilen dönemin en yüksek gider yoğunluğunu oluşturuyor. Tek seferlik ve tekrarlayan kalemleri ayırarak pazarlık veya limit alanlarını belirleyin.`
+        : "Giderler gelirin önemli bölümünü kullanıyor. Tek seferlik ve tekrarlayan kalemleri ayırarak kontrol edilebilir harcamaları belirleyin.",
+      evidence: `Gider / tahsilat oranı %${Math.round(expenseRatio * 100).toLocaleString("tr-TR")}${topExpense ? ` · ${topExpense.label}: ${formatMoney(topExpense.value)}` : ""}`,
+      tone: expenseRatio >= 0.9 ? "rose" : "amber",
+      actionLabel: "Gider dağılımına git",
+      actionHref: "/reports#analysis-charts"
+    });
+  }
+
+  if (summary.reimbursableExpenses > 0) {
+    insights.push({
+      id: "reimbursable-expense",
+      category: "spending",
+      title: "Yansıtılabilir masrafları bekletmeyin",
+      message: "Müvekkile yansıtılabilir giderleri dosya ve belge bağlantılarıyla birlikte düzenli faturalamak, büronun kendi nakdinin dosya masraflarında bağlı kalmasını azaltır.",
+      evidence: `${formatMoney(summary.reimbursableExpenses)} yansıtılabilir masraf`,
+      tone: "blue",
+      actionLabel: "Masrafları incele",
+      actionHref: "/reports?type=reimbursable"
+    });
+  }
+
+  if (caseSignals.risk) {
+    insights.push({
+      id: "case-type-risk",
+      category: "case-mix",
+      title: `${caseSignals.risk.label} dosyalarında finans planını sıkılaştırın`,
+      message: "Bu dosya türünde giderler tahsilatı aşıyor. Dosya kabul kararını mesleki ve etik değerlendirmeden ayırmadan; masraf avansı, ara ödeme ve fiyatlandırma planını baştan netleştirin.",
+      evidence: `${caseSignals.risk.count} dosya · ${formatSignedMoney(caseSignals.risk.net)} net katkı`,
+      tone: "rose",
+      actionLabel: "Dosyaları incele",
+      actionHref: "/cases"
+    });
+  } else if (caseSignals.strong) {
+    insights.push({
+      id: "case-type-strong",
+      category: "case-mix",
+      title: `${caseSignals.strong.label} dosyaları güçlü katkı veriyor`,
+      message: "Bu sinyali dava kabulü için tek ölçüt olarak kullanmayın. Benzer dosyalarda emek süresi, tahsilat süresi ve masraf yapısını karşılaştırarak fiyatlandırma standardınızı geliştirin.",
+      evidence: `${caseSignals.strong.count} dosya · ${formatSignedMoney(caseSignals.strong.net)} net katkı`,
+      tone: "green",
+      actionLabel: "Dosya raporunu aç",
+      actionHref: "/reports?type=case"
+    });
+  }
+
+  insights.push(investmentReadinessInsight({ income, net, margin, collectionRatio, rangeLabel }));
+
+  if (net > 0) {
+    insights.push({
+      id: "motivation-positive",
+      category: "motivation",
+      title: "İstikrar küçük ama düzenli adımlarla büyür",
+      message: "Pozitif dönemi yalnız sonuç olarak değil, tekrar edilebilir bir sistem olarak görün: tahsilatı zamanında takip edin, giderleri haftalık kontrol edin ve birikimi otomatik bir alışkanlığa dönüştürün.",
+      evidence: `${formatSignedMoney(net)} dönem neti`,
+      tone: "green",
+      actionLabel: "Sermaye merkezini aç",
+      actionHref: "/capital"
+    });
+  }
+
+  return insights.slice(0, 7);
+}
+
+function investmentReadinessInsight({
+  income,
+  net,
+  margin,
+  collectionRatio,
+  rangeLabel
+}: {
+  income: number;
+  net: number;
+  margin: number;
+  collectionRatio: number;
+  rangeLabel: string;
+}): ReportFinancialInsight {
+  const ready = income > 0 && net > 0 && margin >= 0.15 && collectionRatio < 0.5;
+
+  return {
+    id: "investment-readiness",
+    category: "investment-readiness",
+    title: ready ? "Yatırım için hazırlık zemini oluşuyor" : "Yatırımdan önce finansal zemini güçlendirin",
+    message: ready
+      ? "Önce vergi ve kısa vadeli yükümlülükleri, ardından 3-6 aylık büro gideri için likit tamponu doğrulayın. Kalan tutarı risk süreniz ve kayıp toleransınıza uygun araçlarda değerlendirmeden önce yetkili bir yatırım kuruluşundan yerindelik değerlendirmesi alın."
+      : "Nakit tamponu, açık alacaklar ve dönem marjı netleşmeden yatırım tutarı ayırmak büro likiditesini zorlayabilir. Önce düzenli pozitif nakit akışı hedefleyin.",
+    evidence: `${rangeLabel}: ${formatSignedMoney(net)} net · %${Math.round(Math.max(0, margin) * 100).toLocaleString("tr-TR")} marj`,
+    tone: ready ? "blue" : "amber",
+    actionLabel: ready ? "Varlık planını aç" : "Finans planını gözden geçir",
+    actionHref: ready ? "/capital" : "/reports#summary-kpis"
+  };
+}
+
+function caseTypeSignals(context: ReportContext) {
+  const groups = new Map<string, { label: string; income: number; expense: number; caseIds: Set<string> }>();
+
+  for (const row of context.incomes) {
+    const label = cleanCaseType(row.caseFile?.caseType);
+    if (!label || !row.caseFileId) continue;
+    const current = groups.get(label) ?? { label, income: 0, expense: 0, caseIds: new Set<string>() };
+    current.income += toNumber(row.amount);
+    current.caseIds.add(row.caseFileId);
+    groups.set(label, current);
+  }
+
+  for (const row of context.expenses) {
+    const label = cleanCaseType(row.caseFile?.caseType);
+    if (!label || !row.caseFileId) continue;
+    const current = groups.get(label) ?? { label, income: 0, expense: 0, caseIds: new Set<string>() };
+    current.expense += toNumber(row.amount);
+    current.caseIds.add(row.caseFileId);
+    groups.set(label, current);
+  }
+
+  const signals = [...groups.values()]
+    .map((item) => ({ label: item.label, count: item.caseIds.size, net: item.income - item.expense, income: item.income, expense: item.expense }))
+    .filter((item) => item.count > 0);
+  const risk = signals.filter((item) => item.net < 0 && item.expense > 0).sort((a, b) => a.net - b.net)[0] ?? null;
+  const strong = signals.filter((item) => item.net > 0).sort((a, b) => b.net - a.net)[0] ?? null;
+
+  return { risk, strong };
+}
+
+function cleanCaseType(value: string | null | undefined) {
+  const clean = value?.replace(/\s+/g, " ").trim();
+  if (!clean) return null;
+  return clean.length > 42 ? `${clean.slice(0, 41)}…` : clean;
 }
 
 function buildTopIncomeClientRows(context: ReportContext): ReportAnalysisRow[] {

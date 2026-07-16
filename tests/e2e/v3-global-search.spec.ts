@@ -60,7 +60,8 @@ test.describe("V3 global smart search", () => {
 
     await page.goto("/dashboard");
     await expect(page.locator('[data-app-shell-ready="true"]')).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
+    await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+    await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
 
     await page.keyboard.press("Control+K");
     if (!(await page.getByTestId("global-search-dialog").isVisible().catch(() => false))) {

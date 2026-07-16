@@ -1,19 +1,23 @@
 import type { Prisma } from "@prisma/client";
-import { Archive, Search } from "lucide-react";
-import Link from "next/link";
+import { Archive, Search, Users } from "lucide-react";
+import Link from "@/components/app-link";
 
 import { ClientArchiveButton } from "@/components/client-archive-button";
 import { DataTable } from "@/components/data-table";
-import { EntityForm } from "@/components/entity-form";
+import { RecordCreateButton } from "@/components/record-create-button";
+import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { clientTypeLabels, toOptions } from "@/lib/labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
 type ClientsPageProps = {
-  searchParams: Promise<{ q?: string; archived?: string }>;
+  searchParams: Promise<{ q?: string; archived?: string; page?: string }>;
 };
 
 export default async function ClientsPage({ searchParams }: ClientsPageProps) {
@@ -21,6 +25,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const showArchived = params.archived === "1";
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const where: Prisma.ClientWhereInput = {
     userId: user.id,
     deletedAt: null,
@@ -38,40 +43,49 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
       : {})
   };
 
-  const clients = await prisma.client.findMany({
-    where,
-    orderBy: { name: "asc" },
-    include: { _count: { select: { cases: { where: { deletedAt: null, status: { not: "ARCHIVED" } } } } } }
-  });
+  const [clients, totalCount, activeCount, archivedCount] = await Promise.all([
+    prisma.client.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: pagination.skip,
+      take: pagination.take,
+      include: { _count: { select: { cases: { where: { deletedAt: null, status: { not: "ARCHIVED" } } } } } }
+    }),
+    prisma.client.count({ where }),
+    prisma.client.count({ where: { userId: user.id, deletedAt: null, archivedAt: null } }),
+    prisma.client.count({ where: { userId: user.id, deletedAt: null, archivedAt: { not: null } } })
+  ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
   const clientFields = [
     { name: "name", label: "Ad / Ünvan" },
-    { name: "type", label: "Tür", type: "select" as const, options: toOptions(clientTypeLabels) },
-    { name: "tcNo", label: "T.C. No" },
-    { name: "taxNo", label: "Vergi No" },
-    { name: "email", label: "E-posta", type: "email" as const },
-    { name: "phone", label: "Telefon", type: "tel" as const },
-    { name: "address", label: "Adres" },
+    { name: "type", label: "Tür", type: "select" as const, options: toOptions(clientTypeLabels), section: "advanced" as const },
+    { name: "tcNo", label: "T.C. No", section: "advanced" as const },
+    { name: "taxNo", label: "Vergi No", section: "advanced" as const },
+    { name: "email", label: "E-posta", type: "email" as const, section: "advanced" as const },
+    { name: "phone", label: "Telefon", type: "tel" as const, required: false },
+    { name: "address", label: "Adres", section: "advanced" as const },
     { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
   ];
 
   return (
     <div className="space-y-5">
-      <EntityForm
-        title="Müvekkil Ekle"
-        endpoint="/api/clients"
-        schemaKey="client"
-        defaults={{
-          name: "",
-          type: "INDIVIDUAL",
-          tcNo: "",
-          taxNo: "",
-          email: "",
-          phone: "",
-          address: "",
-          notes: ""
-        }}
-        fields={clientFields}
+      <PageHeader
+        eyebrow="Dosya Yönetimi"
+        title="Müvekkiller"
+        description="Müvekkil kayıtlarını, arşiv durumunu ve bağlı dosya yoğunluğunu tek listeden yönetin."
+        actions={
+          <>
+            <RecordCreateButton label="Müvekkil Ekle" title="Müvekkil Ekle" endpoint="/api/clients" schemaKey="client" autoOpenParam="create" defaults={{ name: "", type: "INDIVIDUAL", tcNo: "", taxNo: "", email: "", phone: "", address: "", notes: "" }} fields={clientFields} />
+            <Link href={showArchived ? "/clients" : "/clients?archived=1"} className="secondary-action min-h-11 px-4"><Archive className="h-4 w-4" aria-hidden />{showArchived ? "Aktifler" : "Arşiv"}</Link>
+          </>
+        }
       />
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <MetricCard title="Toplam Sonuç" value={String(totalCount)} detail={`${pagination.pageSize} kayıt / sayfa`} icon={Users} />
+        <MetricCard title="Aktif Müvekkil" value={String(activeCount)} icon={Users} tone="green" />
+        <MetricCard title="Arşiv" value={String(archivedCount)} icon={Archive} tone="neutral" />
+      </section>
 
       <section className="surface p-4">
         <form className="flex flex-col gap-3 sm:flex-row" action="/clients">
@@ -91,13 +105,13 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               Ara
             </button>
             <Link
               href={showArchived ? "/clients" : "/clients?archived=1"}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="secondary-action min-h-11 px-4"
             >
               <Archive className="h-4 w-4" aria-hidden />
               {showArchived ? "Aktifler" : "Arşiv"}
@@ -142,6 +156,9 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 >
                   Detay
                 </Link>
+                <Link href={`/documents/new?linkedClientId=${row.id}`} className="secondary-action min-h-11 px-3">
+                  Belge bağla
+                </Link>
                 <RecordEditButton
                   title="Müvekkil Düzenle"
                   endpoint={`/api/clients/${row.id}`}
@@ -164,6 +181,14 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
             )
           }
         ]}
+      />
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) => createPageHref("/clients", { q: query, archived: showArchived ? "1" : "" }, page)}
       />
     </div>
   );

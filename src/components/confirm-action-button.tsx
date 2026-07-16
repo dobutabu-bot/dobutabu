@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ActionButton } from "@/components/action-buttons";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { queueToast, showToast } from "@/components/toast";
+import { apiRequest, clientErrorMessage } from "@/lib/client-api";
 import { emitAppDataMutation } from "@/lib/client-sync";
 
 type ConfirmActionButtonProps = {
@@ -15,7 +16,8 @@ type ConfirmActionButtonProps = {
   title: string;
   description: string;
   confirmLabel?: string;
-  method?: "POST" | "DELETE";
+  method?: "POST" | "PATCH" | "DELETE";
+  body?: Record<string, unknown>;
   tone?: "danger" | "neutral";
   successMessage?: string;
   redirectTo?: string;
@@ -30,7 +32,8 @@ export function ConfirmActionButton({
   method = "DELETE",
   tone = "danger",
   successMessage,
-  redirectTo
+  redirectTo,
+  body
 }: ConfirmActionButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -46,13 +49,15 @@ export function ConfirmActionButton({
     setMessage(null);
 
     try {
-      const response = await fetch(endpoint, { method });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        setMessage(payload?.message || "İşlem tamamlanamadı. Lütfen tekrar deneyin.");
-        return;
-      }
+      await apiRequest(
+        endpoint,
+        {
+          method,
+          headers: body ? { "Content-Type": "application/json" } : undefined,
+          body: body ? JSON.stringify(body) : undefined
+        },
+        "İşlem tamamlanamadı. Lütfen tekrar deneyin."
+      );
 
       if (successMessage) {
         showToast(successMessage);
@@ -68,8 +73,8 @@ export function ConfirmActionButton({
       } else {
         router.refresh();
       }
-    } catch {
-      setMessage("Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin.");
+    } catch (error) {
+      setMessage(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setLoading(false);
     }

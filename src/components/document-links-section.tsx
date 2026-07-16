@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Eye, FilePlus2, Link2, Loader2, Unlink } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -179,17 +179,17 @@ export function DocumentLinksSection({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <Link href={`/documents/${document.id}`} className="secondary-action min-h-10 px-3">
+                  <Link href={`/documents/${document.id}`} className="secondary-action min-h-11 px-3">
                     <Eye className="h-4 w-4" aria-hidden />
                     Görüntüle
                   </Link>
-                  <Link href={`/api/documents/${document.id}/download`} className="secondary-action min-h-10 px-3">
+                  <a href={`/api/documents/${document.id}/download`} className="secondary-action min-h-11 px-3">
                     <Download className="h-4 w-4" aria-hidden />
                     İndir
-                  </Link>
+                  </a>
                   <button
                     type="button"
-                    className={cn("secondary-action min-h-10 px-3 text-rose-700", loadingAction ? "opacity-70" : "")}
+                    className={cn("secondary-action min-h-11 px-3 text-rose-700", loadingAction ? "opacity-70" : "")}
                     disabled={Boolean(loadingAction)}
                     onClick={() => unlinkDocument(document.id)}
                   >

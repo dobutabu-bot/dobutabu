@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { ActionButton } from "@/components/action-buttons";
 import { showToast } from "@/components/toast";
+import { apiRequest, clientErrorMessage } from "@/lib/client-api";
 import { emitAppDataMutation } from "@/lib/client-sync";
 
 type ReminderStatusButtonProps = {
@@ -27,23 +28,17 @@ export function ReminderStatusButton({ endpoint, payload, nextStatus }: Reminder
     setLoading(true);
 
     try {
-      const response = await fetch(endpoint, {
+      await apiRequest(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, status: nextStatus })
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { message?: string } | null;
-        showToast(data?.message || "Hatırlatma güncellenemedi.");
-        return;
-      }
+      }, "Hatırlatma güncellenemedi.");
 
       showToast(completed ? "Hatırlatma tamamlandı." : "Hatırlatma yeniden açıldı.");
       emitAppDataMutation("reminder-status");
       router.refresh();
-    } catch {
-      showToast("Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin.");
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setLoading(false);
     }

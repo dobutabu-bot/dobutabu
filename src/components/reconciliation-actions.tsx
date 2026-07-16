@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { TouchActionButton, touchActionButtonClass } from "@/components/touch-action-button";
+import { showToast } from "@/components/toast";
+import { apiRequest, clientErrorMessage } from "@/lib/client-api";
+import { emitAppDataMutation } from "@/lib/client-sync";
 
 type ActionButtonProps = {
   endpoint: string;
@@ -37,17 +40,16 @@ export function ReconciliationActionButton({ endpoint, payload, label, variant =
   async function runAction() {
     setPending(true);
     try {
-      const response = await fetch(endpoint, {
+      await apiRequest(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      });
-      const result = (await response.json().catch(() => ({}))) as { message?: string };
-      if (!response.ok) {
-        window.alert(result.message ?? "İşlem tamamlanamadı.");
-        return;
-      }
+      }, "İşlem tamamlanamadı.");
+      showToast(`${label} işlemi tamamlandı.`);
+      emitAppDataMutation("reconciliation-action");
       router.refresh();
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setPending(false);
     }
@@ -85,17 +87,16 @@ export function ManualReconciliationForm({
     if (!bankRowId || !systemEntryId) return;
     setPending(true);
     try {
-      const response = await fetch("/api/reconciliation/match", {
+      await apiRequest("/api/reconciliation/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bankRowId, targetType: "LEDGER", targetId: systemEntryId, matchMode: "MANUALLY_MATCHED" })
-      });
-      const result = (await response.json().catch(() => ({}))) as { message?: string };
-      if (!response.ok) {
-        window.alert(result.message ?? "Manuel eşleştirme tamamlanamadı.");
-        return;
-      }
+      }, "Manuel eşleştirme tamamlanamadı.");
+      showToast("Hareketler eşleştirildi.");
+      emitAppDataMutation("reconciliation-manual-match");
       router.refresh();
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setPending(false);
     }

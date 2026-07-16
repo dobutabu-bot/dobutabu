@@ -416,7 +416,7 @@ export function CapitalImportWizard({ maxUploadMb }: CapitalImportWizardProps) {
                   </label>
                 ))}
               </div>
-              <button type="button" className="secondary-action mt-4 min-h-10" onClick={() => runPreview(3)} disabled={loading}>
+              <button type="button" className="secondary-action mt-4 min-h-11" onClick={() => runPreview(3)} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <ArrowRight className="h-4 w-4" aria-hidden />}
                 Eşlemeyle Tekrar Öneri Üret
               </button>
@@ -548,7 +548,7 @@ function SuggestionSection({
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                className={cn("secondary-action min-h-10 justify-center", suggestion.decision === "REJECTED" && "border-rose-200 bg-rose-50 text-rose-700")}
+                className={cn("secondary-action min-h-11 justify-center", suggestion.decision === "REJECTED" && "border-rose-200 bg-rose-50 text-rose-700")}
                 onClick={() => onUpdate(index, { decision: "REJECTED" })}
               >
                 <XCircle className="h-4 w-4" aria-hidden />
@@ -556,7 +556,7 @@ function SuggestionSection({
               </button>
               <button
                 type="button"
-                className={cn("primary-action min-h-10 justify-center", suggestion.decision === "ACCEPTED" ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-950")}
+                className={cn("primary-action min-h-11 justify-center", suggestion.decision === "ACCEPTED" ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-950")}
                 onClick={() => onUpdate(index, { decision: "ACCEPTED" })}
               >
                 <CheckCircle2 className="h-4 w-4" aria-hidden />

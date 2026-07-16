@@ -1,20 +1,23 @@
 import { Prisma } from "@prisma/client";
 import { Download, Eye, Filter, HandCoins } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { RecordCreateButton } from "@/components/record-create-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { requireUser } from "@/lib/auth";
 import { appendCollectionFilters, collectionWhereFromFilters, type CollectionFilters } from "@/lib/collection-query";
 import { incomeCategoryLabels, paymentMethodLabels, toOptions } from "@/lib/labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { dateInputValue, formatDate, formatDirectionalMoney, formatMoney } from "@/lib/utils";
 
 type CollectionsPageProps = {
-  searchParams: Promise<CollectionFilters>;
+  searchParams: Promise<CollectionFilters & { page?: string }>;
 };
 
 export default async function CollectionsPage({ searchParams }: CollectionsPageProps) {
@@ -30,9 +33,10 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
         ? params.category
         : ""
   };
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const where: Prisma.IncomeWhereInput = { ...collectionWhereFromFilters(filters), userId: user.id };
 
-  const [activeClients, activeCases, activeCashAccounts, filterClients, filterCases, collections] = await Promise.all([
+  const [activeClients, activeCases, activeCashAccounts, filterClients, filterCases, collections, totalCount, filteredAggregate, lastIncome] = await Promise.all([
     prisma.client.findMany({ where: { userId: user.id, archivedAt: null, deletedAt: null }, orderBy: { name: "asc" } }),
     prisma.caseFile.findMany({
       where: { userId: user.id, deletedAt: null, status: { not: "ARCHIVED" }, client: { archivedAt: null, deletedAt: null } },
@@ -52,9 +56,19 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
     prisma.income.findMany({
       where,
       orderBy: { date: "desc" },
+      skip: pagination.skip,
+      take: pagination.take,
       include: { client: true, caseFile: true, cashAccount: true }
+    }),
+    prisma.income.count({ where }),
+    prisma.income.aggregate({ where, _sum: { amount: true } }),
+    prisma.income.findFirst({
+      where: { userId: user.id, deletedAt: null },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      select: { paymentMethod: true }
     })
   ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
 
   const clientOptions = [
     { label: "Seçiniz", value: "" },
@@ -64,7 +78,9 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
     { label: "Dosya yok", value: "" },
     ...activeCases.map((caseFile) => ({
       label: `${caseFile.client.name} - ${caseFile.title}`,
-      value: caseFile.id
+      value: caseFile.id,
+      parentValue: caseFile.clientId,
+      searchTerms: [caseFile.fileNumber ?? "", caseFile.title]
     }))
   ];
   const cashAccountOptions = [
@@ -90,19 +106,20 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
   ];
   const collectionFields = [
     { name: "clientId", label: "Müvekkil", type: "select" as const, options: clientOptions },
-    { name: "caseFileId", label: "Dosya", type: "select" as const, options: caseOptions },
+    { name: "caseFileId", label: "Dosya", type: "select" as const, options: caseOptions, section: "advanced" as const },
     {
       name: "cashAccountId",
       label: "Bu işlem hangi kasaya işlensin?",
       type: "select" as const,
       options: cashAccountOptions,
-      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır."
+      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır.",
+      section: "advanced" as const
     },
     { name: "amount", label: "Tutar", type: "number" as const, min: "0", step: "0.01" },
-    { name: "currency", label: "Para Birimi" },
+    { name: "currency", label: "Para Birimi", section: "advanced" as const },
     { name: "date", label: "Tarih", type: "date" as const },
-    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels) },
-    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(incomeCategoryLabels) },
+    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels), section: "advanced" as const },
+    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(incomeCategoryLabels), section: "advanced" as const },
     {
       name: "receiptIssued",
       label: "Makbuz Kesildi mi?",
@@ -110,9 +127,10 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
       options: [
         { label: "Hayır", value: "false" },
         { label: "Evet", value: "true" }
-      ]
+      ],
+      section: "advanced" as const
     },
-    { name: "receiptNumber", label: "Makbuz Numarası" },
+    { name: "receiptNumber", label: "Makbuz Numarası", section: "advanced" as const },
     { name: "description", label: "Açıklama", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
   ];
   const collectionEditFields = collectionFields.map((field) => {
@@ -143,41 +161,42 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
     Array.from(totalsByCurrency.entries())
       .map(([currency, amount]) => formatMoney(amount, currency))
       .join(" · ") || formatMoney(0);
+  const filteredTotalText = formatMoney(filteredAggregate._sum.amount ?? 0);
   const exportParams = new URLSearchParams({ resource: "collections", format: "csv" });
   appendCollectionFilters(exportParams, filters);
   const exportHref = `/api/export?${exportParams.toString()}`;
 
   return (
     <div className="space-y-5">
-      <section className="surface-dark flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase text-slate-400">Mobil tahsilat girişi</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">Tahsilatlar</h1>
-          <p className="mt-2 text-sm text-slate-300">Müvekkil, dosya ve kasa hesabına bağlı gelir kayıtları.</p>
-        </div>
-        <RecordCreateButton
-          label="Tahsilat Ekle"
-          title="Tahsilat Ekle"
-          endpoint="/api/collections"
-          schemaKey="collection"
-          autoOpenParam="create"
-          defaults={{
-            clientId: "",
-            caseFileId: "",
-            cashAccountId: "",
-            amount: "",
-            currency: "TRY",
-            date: dateInputValue(),
-            paymentMethod: "BANK_TRANSFER",
-            category: "LEGAL_FEE",
-            description: "",
-            receiptIssued: "false",
-            receiptNumber: ""
-          }}
-          fields={collectionFields}
-          successMessage="Tahsilat oluşturuldu."
-        />
-      </section>
+      <PageHeader
+        eyebrow="Finans"
+        title="Tahsilatlar"
+        description="Müvekkil, dosya ve kasa hesabına bağlı gelir kayıtlarını yönetin."
+        actions={
+          <RecordCreateButton
+            label="Tahsilat Ekle"
+            title="Tahsilat Ekle"
+            endpoint="/api/collections"
+            schemaKey="collection"
+            autoOpenParam="create"
+            defaults={{
+              clientId: "",
+              caseFileId: "",
+              cashAccountId: activeCashAccounts.find((account) => account.isDefault)?.id ?? activeCashAccounts[0]?.id ?? "",
+              amount: "",
+              currency: "TRY",
+              date: dateInputValue(),
+              paymentMethod: lastIncome?.paymentMethod ?? "BANK_TRANSFER",
+              category: "LEGAL_FEE",
+              description: "",
+              receiptIssued: "false",
+              receiptNumber: ""
+            }}
+            fields={collectionFields}
+            successMessage="Tahsilat oluşturuldu."
+          />
+        }
+      />
 
       <section className="surface p-4">
         <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]" action="/collections">
@@ -240,8 +259,8 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
       <section className="grid gap-3 lg:grid-cols-[1fr_auto]">
         <MetricCard
           title="Filtrelenen Toplam Tahsilat"
-          value={totalText}
-          detail={`${collections.length} kayıt`}
+          value={filteredTotalText}
+          detail={`${totalCount} kayıt · Bu sayfa: ${totalText}`}
           icon={HandCoins}
           tone="green"
         />
@@ -260,24 +279,23 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
         columns={[
           { header: "Tarih", cell: (row) => formatDate(row.date) },
           { header: "Müvekkil", cell: (row) => row.client.name },
-          { header: "Dosya", cell: (row) => row.caseFile?.title ?? "-" },
-          { header: "Kategori", cell: (row) => incomeCategoryLabels[row.category] },
           { header: "Açıklama", cell: (row) => row.description ?? "-" },
           {
             header: "Tutar",
             cell: (row) => formatDirectionalMoney(row.amount, "IN", row.currency),
             className: "font-medium tabular-finance text-emerald-700"
           },
-          { header: "Yöntem", cell: (row) => paymentMethodLabels[row.paymentMethod] },
-          { header: "Kasa", cell: (row) => row.cashAccount?.name ?? "Ana Kasa" },
-          { header: "Belge", cell: (row) => row.receiptNumber ?? (row.receiptIssued ? "Kesildi" : "-") },
+          { header: "Durum / Belge", cell: (row) => row.receiptNumber ?? (row.receiptIssued ? "Makbuz kesildi" : incomeCategoryLabels[row.category]) },
           {
             header: "İşlem",
             cell: (row) => (
               <div className="flex flex-wrap gap-2">
-                <Link href={`/collections/${row.id}`} className="secondary-action min-h-10 px-3">
+                <Link href={`/collections/${row.id}`} className="secondary-action min-h-11 px-3">
                   <Eye className="h-4 w-4" aria-hidden />
                   Detay
+                </Link>
+                <Link href={`/documents/new?linkedIncomeId=${row.id}`} className="secondary-action min-h-11 px-3">
+                  Belge bağla
                 </Link>
                 <RecordEditButton
                   title="Tahsilat Düzenle"
@@ -311,6 +329,26 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
             )
           }
         ]}
+      />
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) =>
+          createPageHref(
+            "/collections",
+            {
+              startDate: filters.startDate,
+              endDate: filters.endDate,
+              clientId: filters.clientId,
+              caseFileId: filters.caseFileId,
+              category: filters.category
+            },
+            page
+          )
+        }
       />
     </div>
   );

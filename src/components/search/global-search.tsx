@@ -69,7 +69,7 @@ export function GlobalSearch() {
       } finally {
         setLoading(false);
       }
-    }, 220);
+    }, 320);
 
     return () => {
       controller.abort();
@@ -88,7 +88,7 @@ export function GlobalSearch() {
     <>
       <button
         type="button"
-        className="hidden min-h-10 w-[min(24rem,34vw)] items-center justify-between gap-3 rounded-full border border-slate-200 bg-white/75 px-3 text-left text-sm text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 lg:flex"
+        className="hidden min-h-11 w-[min(24rem,34vw)] items-center justify-between gap-3 rounded-full border border-slate-200 bg-white/75 px-3 text-left text-sm text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 lg:flex"
         onClick={() => setOpen(true)}
         aria-label="Akıllı aramayı aç"
         data-testid="global-search-trigger"

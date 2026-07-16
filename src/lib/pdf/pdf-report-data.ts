@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getAccountBasedReport, getCashFlowReport, type CashReportFilters } from "@/lib/cash/cash-report-data";
 import { getCapitalCenterData } from "@/lib/capital/capital-data";
 import {
+  advanceDirectionLabels,
   cashLedgerDirectionLabels,
   caseStatusLabels,
   expenseCategoryLabels,
@@ -29,6 +30,10 @@ export type PdfFilterInput = {
   clientId?: string;
   caseFileId?: string;
   cashAccountId?: string;
+  direction?: string;
+  minAmount?: string;
+  maxAmount?: string;
+  documentStatus?: string;
 };
 
 export function pdfFiltersFromSearchParams(searchParams: URLSearchParams): PdfFilterInput {
@@ -38,7 +43,11 @@ export function pdfFiltersFromSearchParams(searchParams: URLSearchParams): PdfFi
     range: clean(searchParams.get("range")),
     clientId: clean(searchParams.get("clientId")),
     caseFileId: clean(searchParams.get("caseFileId")),
-    cashAccountId: clean(searchParams.get("cashAccountId"))
+    cashAccountId: clean(searchParams.get("cashAccountId")),
+    direction: clean(searchParams.get("direction")),
+    minAmount: clean(searchParams.get("minAmount")),
+    maxAmount: clean(searchParams.get("maxAmount")),
+    documentStatus: clean(searchParams.get("documentStatus"))
   };
 }
 
@@ -412,6 +421,101 @@ export async function buildCashMovementsPdf(userId: string, filters: PdfFilterIn
   };
 }
 
+export async function buildAdvancesPdf(userId: string, filters: PdfFilterInput): Promise<BuiltPdfReport> {
+  const settings = await getFirmSettings(userId);
+  const includeReceived = filters.direction !== "SPENT";
+  const includeSpent = filters.direction !== "RECEIVED";
+  const receivedWhere = includeReceived ? applyAdvanceIncomePdfFilters(baseAdvanceIncomePdfWhere(userId), filters) : { userId, id: "__never__" };
+  const spentWhere = includeSpent ? applyAdvanceExpensePdfFilters(baseAdvanceExpensePdfWhere(userId), filters) : { userId, id: "__never__" };
+  const [receivedRows, spentRows, receivedCount, spentCount, receivedTotal, spentTotal, missingReceivedCount, missingSpentCount] = await Promise.all([
+    prisma.income.findMany({
+      where: receivedWhere,
+      orderBy: { date: "desc" },
+      include: { client: true, caseFile: true, attachedDocuments: { where: { deletedAt: null }, select: { id: true }, take: 1 } },
+      take: 500
+    }),
+    prisma.expense.findMany({
+      where: spentWhere,
+      orderBy: { date: "desc" },
+      include: { client: true, caseFile: true, attachedDocuments: { where: { deletedAt: null }, select: { id: true }, take: 1 } },
+      take: 500
+    }),
+    prisma.income.count({ where: receivedWhere }),
+    prisma.expense.count({ where: spentWhere }),
+    prisma.income.aggregate({ where: receivedWhere, _sum: { amount: true } }),
+    prisma.expense.aggregate({ where: spentWhere, _sum: { amount: true } }),
+    prisma.income.count({ where: applyAdvanceIncomePdfFilters(baseAdvanceIncomePdfWhere(userId), { ...filters, documentStatus: "MISSING_DOCUMENT" }) }),
+    prisma.expense.count({ where: applyAdvanceExpensePdfFilters(baseAdvanceExpensePdfWhere(userId), { ...filters, documentStatus: "MISSING_DOCUMENT" }) })
+  ]);
+
+  const receivedTotalAmount = receivedTotal._sum.amount ?? new Prisma.Decimal(0);
+  const spentTotalAmount = spentTotal._sum.amount ?? new Prisma.Decimal(0);
+  const balance = receivedTotalAmount.minus(spentTotalAmount);
+  const rows = [
+    ...receivedRows.map((row) => ({
+      date: row.date,
+      Tarih: formatDate(row.date),
+      Müvekkil: row.client.name,
+      Dosya: caseLabel(row.caseFile),
+      Açıklama: row.description ?? "-",
+      Yön: advanceDirectionLabels.RECEIVED,
+      Tutar: formatSignedMoney(row.amount, row.currency),
+      Belge: row.attachedDocuments.length > 0 ? "Var" : "Yok"
+    })),
+    ...spentRows.map((row) => ({
+      date: row.date,
+      Tarih: formatDate(row.date),
+      Müvekkil: row.client?.name ?? "-",
+      Dosya: caseLabel(row.caseFile),
+      Açıklama: row.description ?? "-",
+      Yön: advanceDirectionLabels.SPENT,
+      Tutar: formatSignedMoney(-Math.abs(toNumber(row.amount)), row.currency),
+      Belge: row.attachedDocuments.length > 0 ? "Var" : "Yok"
+    }))
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 500)
+    .map((row) => ({
+      Tarih: row.Tarih,
+      Müvekkil: row.Müvekkil,
+      Dosya: row.Dosya,
+      Açıklama: row.Açıklama,
+      Yön: row.Yön,
+      Tutar: row.Tutar,
+      Belge: row.Belge
+    }));
+  const totalRows = receivedCount + spentCount;
+  const truncated = totalRows > rows.length;
+
+  return {
+    filename: datedPdfFilename("masraf-avanslari"),
+    input: baseInput(settings, {
+      title: "Masraf Avansları Raporu",
+      subtitle: "Müvekkil ve dosya bazlı alınan/harcanan masraf avansları",
+      period: reportPeriodLabel(filters),
+      summaries: [
+        summary("Toplam Alınan", formatMoney(receivedTotalAmount), "green"),
+        summary("Toplam Harcanan", formatMoney(spentTotalAmount), "rose"),
+        summary("Kullanılabilir Bakiye", formatSignedMoney(balance), toNumber(balance) >= 0 ? "green" : "rose"),
+        summary("Hareket Sayısı", String(totalRows)),
+        summary("Belgesiz Hareket", String(missingReceivedCount + missingSpentCount), missingReceivedCount + missingSpentCount > 0 ? "amber" : "neutral")
+      ],
+      tables: [
+        {
+          title: "Masraf Avansı Hareketleri",
+          headers: ["Tarih", "Müvekkil", "Dosya", "Açıklama", "Yön", "Tutar", "Belge"],
+          rows
+        }
+      ],
+      notes: [
+        "Bu PDF özel rapor route'u üzerinden üretilir; uygulama ekranındaki navigasyon, drawer ve interaktif aksiyonlar PDF'e basılmaz.",
+        "Tablolar kontrollü PDF yerleşimiyle sayfalara bölünür; header/footer ve sayfa numarası otomatik eklenir.",
+        truncated ? `Filtre ${totalRows} hareket döndürdü. Performans için PDF çıktısı ilk ${rows.length} satırla sınırlandı.` : "Seçilen filtredeki tüm hareketler PDF'e dahil edildi."
+      ]
+    })
+  };
+}
+
 export async function buildCapitalPdf(userId: string): Promise<BuiltPdfReport> {
   const [settings, capital] = await Promise.all([getFirmSettings(userId), getCapitalCenterData(userId)]);
 
@@ -736,6 +840,84 @@ function reportPeriodLabel(filters: Pick<PdfFilterInput, "startDate" | "endDate"
   }
 
   return "Tüm dönem";
+}
+
+function baseAdvanceIncomePdfWhere(userId: string): Prisma.IncomeWhereInput {
+  return {
+    userId,
+    deletedAt: null,
+    category: "ADVANCE",
+    client: { archivedAt: null, deletedAt: null },
+    OR: [{ caseFileId: null }, { caseFile: { status: { not: "ARCHIVED" }, archivedAt: null, deletedAt: null } }]
+  };
+}
+
+function baseAdvanceExpensePdfWhere(userId: string): Prisma.ExpenseWhereInput {
+  return {
+    userId,
+    deletedAt: null,
+    isClientExpense: true,
+    AND: [
+      { OR: [{ clientId: null }, { client: { archivedAt: null, deletedAt: null } }] },
+      { OR: [{ caseFileId: null }, { caseFile: { status: { not: "ARCHIVED" }, archivedAt: null, deletedAt: null } }] }
+    ]
+  };
+}
+
+function applyAdvanceIncomePdfFilters(baseWhere: Prisma.IncomeWhereInput, filters: PdfFilterInput): Prisma.IncomeWhereInput {
+  const where: Prisma.IncomeWhereInput = { ...baseWhere };
+  const andFilters: Prisma.IncomeWhereInput[] = [];
+  const date = pdfDateFilter(filters);
+  const amount = pdfAmountFilter(filters);
+
+  if (filters.clientId) where.clientId = filters.clientId;
+  if (filters.caseFileId) where.caseFileId = filters.caseFileId;
+  if (date) where.date = date;
+  if (amount) where.amount = amount;
+  if (filters.documentStatus === "WITH_DOCUMENT") andFilters.push({ attachedDocuments: { some: { deletedAt: null } } });
+  if (filters.documentStatus === "MISSING_DOCUMENT") {
+    andFilters.push({ attachedDocuments: { none: { deletedAt: null } }, documentNotRequired: false });
+  }
+
+  return appendPdfAndFilters(where, andFilters);
+}
+
+function applyAdvanceExpensePdfFilters(baseWhere: Prisma.ExpenseWhereInput, filters: PdfFilterInput): Prisma.ExpenseWhereInput {
+  const where: Prisma.ExpenseWhereInput = { ...baseWhere };
+  const andFilters: Prisma.ExpenseWhereInput[] = [];
+  const date = pdfDateFilter(filters);
+  const amount = pdfAmountFilter(filters);
+
+  if (filters.clientId) where.clientId = filters.clientId;
+  if (filters.caseFileId) where.caseFileId = filters.caseFileId;
+  if (date) where.date = date;
+  if (amount) where.amount = amount;
+  if (filters.documentStatus === "WITH_DOCUMENT") andFilters.push({ attachedDocuments: { some: { deletedAt: null } } });
+  if (filters.documentStatus === "MISSING_DOCUMENT") {
+    andFilters.push({ attachedDocuments: { none: { deletedAt: null } }, documentNotRequired: false });
+  }
+
+  return appendPdfAndFilters(where, andFilters);
+}
+
+function pdfDateFilter(filters: PdfFilterInput): Prisma.DateTimeFilter | undefined {
+  const range: Prisma.DateTimeFilter = {};
+  if (filters.startDate) range.gte = new Date(`${filters.startDate}T00:00:00.000+03:00`);
+  if (filters.endDate) range.lte = new Date(`${filters.endDate}T23:59:59.999+03:00`);
+  return Object.keys(range).length > 0 ? range : undefined;
+}
+
+function pdfAmountFilter(filters: PdfFilterInput): Prisma.DecimalFilter | undefined {
+  const range: Prisma.DecimalFilter = {};
+  if (filters.minAmount) range.gte = filters.minAmount;
+  if (filters.maxAmount) range.lte = filters.maxAmount;
+  return Object.keys(range).length > 0 ? range : undefined;
+}
+
+function appendPdfAndFilters<T extends { AND?: unknown }>(where: T, andFilters: T[]) {
+  if (andFilters.length === 0) return where;
+  const existing = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+  return { ...where, AND: [...existing, ...andFilters] };
 }
 
 function clean(value: string | null) {

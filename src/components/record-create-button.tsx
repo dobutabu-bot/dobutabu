@@ -33,9 +33,11 @@ export function RecordCreateButton({
   autoOpenParam
 }: RecordCreateButtonProps) {
   const [open, setOpen] = useState(false);
+  const [ready, setReady] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    setReady(true);
     if (!autoOpenParam || searchParams.get(autoOpenParam) !== "1") {
       return;
     }
@@ -49,6 +51,7 @@ export function RecordCreateButton({
         label={label}
         icon={Plus}
         tone="primary"
+        disabled={!ready}
         className="w-full border border-white/10 bg-white text-slate-950 hover:bg-slate-100 sm:w-auto"
         onClick={() => setOpen(true)}
       />
@@ -62,6 +65,7 @@ export function RecordCreateButton({
           submitLabel={submitLabel}
           successMessage={successMessage}
           onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
         />
       </FormModal>
     </>

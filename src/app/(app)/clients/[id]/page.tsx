@@ -1,10 +1,12 @@
-import { ArrowLeft, BriefcaseBusiness, CircleDollarSign, Download, HandCoins, ReceiptText, Scale } from "lucide-react";
-import Link from "next/link";
+import { BriefcaseBusiness, CircleDollarSign, Download, HandCoins, ReceiptText, Scale } from "lucide-react";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { ClientArchiveButton } from "@/components/client-archive-button";
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
+import { DetailActivityLog } from "@/components/detail-activity-log";
+import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
 import { DocumentLinksSection } from "@/components/document-links-section";
 import { MetricCard } from "@/components/metric-card";
 import { RecordEditButton } from "@/components/record-edit-button";
@@ -72,22 +74,22 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
   const netBalance = totalIncome - totalExpense;
   const clientFields = [
     { name: "name", label: "Ad / Ünvan" },
-    { name: "type", label: "Tür", type: "select" as const, options: toOptions(clientTypeLabels) },
-    { name: "tcNo", label: "T.C. No" },
-    { name: "taxNo", label: "Vergi No" },
-    { name: "email", label: "E-posta", type: "email" as const },
     { name: "phone", label: "Telefon", type: "tel" as const },
-    { name: "address", label: "Adres" },
-    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
+    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" },
+    { name: "type", label: "Tür", type: "select" as const, options: toOptions(clientTypeLabels), section: "advanced" as const },
+    { name: "tcNo", label: "T.C. No", section: "advanced" as const },
+    { name: "taxNo", label: "Vergi No", section: "advanced" as const },
+    { name: "email", label: "E-posta", type: "email" as const, section: "advanced" as const },
+    { name: "address", label: "Adres", section: "advanced" as const }
   ];
   const caseFields = [
     { name: "clientId", label: "Müvekkil", type: "select" as const, options: [{ label: client.name, value: client.id }] },
     { name: "title", label: "Başlık" },
     { name: "fileNumber", label: "Dosya No", placeholder: "2024/330 E. veya 2024/22943 İstanbul 19. İcra Dairesi" },
-    { name: "courtOrOffice", label: "Mahkeme / Daire" },
     { name: "caseType", label: "Dosya Türü" },
-    { name: "status", label: "Durum", type: "select" as const, options: toOptions(caseStatusLabels) },
-    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
+    { name: "courtOrOffice", label: "Mahkeme / Daire", section: "advanced" as const },
+    { name: "status", label: "Durum", type: "select" as const, options: toOptions(caseStatusLabels), section: "advanced" as const },
+    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3", section: "advanced" as const }
   ];
   const latestTransactions = [
     ...client.incomes.map((row) => ({
@@ -114,28 +116,23 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link href="/clients" className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Müvekkillere dön
-          </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-semibold text-slate-950">{client.name}</h2>
-            <StatusBadge tone={client.archivedAt ? "neutral" : "green"}>
-              {client.archivedAt ? "Arşiv" : "Aktif"}
-            </StatusBadge>
+      <DetailBreadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Müvekkiller", href: "/clients" }, { label: client.name }]} />
+      <DetailHero
+        eyebrow="Müvekkil Detayı"
+        title={client.name}
+        description={`${client.phone ?? "Telefon yok"} · ${client.email ?? "E-posta yok"}`}
+        status={
+          <>
+            <StatusBadge tone={client.archivedAt ? "neutral" : "green"}>{client.archivedAt ? "Arşiv" : "Aktif"}</StatusBadge>
             <StatusBadge>{clientTypeLabels[client.type]}</StatusBadge>
-          </div>
-          <p className="mt-1 text-sm text-slate-500">
-            {client.phone ?? "Telefon yok"} · {client.email ?? "E-posta yok"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Link href={`/api/reports/client/${client.id}/pdf`} className="secondary-action min-h-10 px-3">
+          </>
+        }
+        actions={
+          <>
+          <a href={`/api/reports/client/${client.id}/pdf`} className="secondary-action min-h-11 px-3">
             <Download className="h-4 w-4" aria-hidden />
             PDF indir
-          </Link>
+          </a>
           {client.archivedAt ? null : (
             <>
             <RecordEditButton
@@ -158,8 +155,10 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
             <ClientArchiveButton clientId={client.id} redirectTo="/clients" />
             </>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
+      <DetailTabs />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Toplam Tahsilat" value={formatDirectionalMoney(totalIncome, "IN")} icon={HandCoins} tone="green" />
@@ -169,7 +168,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         <MetricCard title="Net Bakiye" value={formatSignedMoney(netBalance)} icon={CircleDollarSign} tone={netBalance >= 0 ? "green" : "rose"} />
       </div>
 
-      <section className="surface p-4">
+      <section id="overview" className="surface scroll-mt-24 p-4">
         <h3 className="mb-4 text-sm font-semibold text-slate-950">Genel Bilgiler</h3>
         <dl className="grid gap-3 text-sm md:grid-cols-2">
           <InfoRow label="Ad / Ünvan" value={client.name} />
@@ -183,7 +182,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         </dl>
       </section>
 
-      <section className="space-y-3">
+      <section id="finance" className="scroll-mt-24 space-y-3">
         <h3 className="text-sm font-semibold text-slate-950">Bağlı Dosyalar</h3>
         <DataTable
           rows={client.cases}
@@ -215,7 +214,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/cases/${row.id}`}
-                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
                   >
                     Detay
                   </Link>
@@ -273,13 +272,16 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         />
       </section>
 
-      <DocumentLinksSection
-        entityType="CLIENT"
-        entityId={client.id}
-        documents={documentLinks.documents}
-        options={documentLinks.options}
-        uploadHref={documentLinks.uploadHref}
-      />
+      <div id="documents" className="scroll-mt-24">
+        <DocumentLinksSection
+          entityType="CLIENT"
+          entityId={client.id}
+          documents={documentLinks.documents}
+          options={documentLinks.options}
+          uploadHref={documentLinks.uploadHref}
+        />
+      </div>
+      <DetailActivityLog userId={user.id} entityType="CLIENT" entityId={client.id} />
 
       <section className="surface p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-950">Notlar</h3>

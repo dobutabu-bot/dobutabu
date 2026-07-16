@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ActionButton } from "@/components/action-buttons";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { showToast } from "@/components/toast";
+import { apiRequest, clientErrorMessage } from "@/lib/client-api";
 import { emitAppDataMutation } from "@/lib/client-sync";
 
 type RestoreRecordButtonProps = {
@@ -34,20 +35,14 @@ export function RestoreRecordButton({
     setMessage(null);
 
     try {
-      const response = await fetch(endpoint, { method: "POST" });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        setMessage(payload?.message || "Kayıt geri alınamadı. Lütfen tekrar deneyin.");
-        return;
-      }
+      await apiRequest(endpoint, { method: "POST" }, "Kayıt geri alınamadı. Lütfen tekrar deneyin.");
 
       showToast("Kayıt geri alındı.");
       setOpen(false);
       emitAppDataMutation("restore-record");
       router.refresh();
-    } catch {
-      setMessage("Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin.");
+    } catch (error) {
+      setMessage(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setLoading(false);
     }

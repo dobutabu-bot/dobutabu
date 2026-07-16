@@ -18,7 +18,7 @@ import { endOfDateInput, formatDate, formatDirectionalMoney, formatMoney, parseD
 
 export type { GlobalSearchData, SearchResultGroup, SearchResultGroupId, SearchResultItem } from "@/lib/search/types";
 
-const SEARCH_LIMIT_PER_SOURCE = 8;
+const SEARCH_LIMIT_PER_SOURCE = 6;
 
 export async function searchAll(userId: string, query: string): Promise<GlobalSearchData> {
   const normalizedQuery = normalizeSearchQuery(query);

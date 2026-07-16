@@ -1,5 +1,5 @@
 import { Landmark, SearchCheck, ShieldAlert, WalletCards } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
 import { BalanceAdjustmentAction } from "@/components/balance-adjustment-action";
@@ -89,13 +89,13 @@ export function BalanceReconciliationScreen({
       <section className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5">
         <BalanceMetric
           label="Ekstre kapanış bakiyesi"
-          value={<AmountText value={data.summary.bankBalance} currency={data.summary.currency} showSign={false} size="lg" variant="strong" />}
+          value={<AmountText value={data.summary.bankBalance} currency={data.summary.currency} showSign size="lg" variant="strong" />}
           detail={data.balanceImport ? `${data.balanceImport.bankName} · ${data.balanceImport.periodLabel}` : "Ekstre yok"}
           icon={<Landmark className="h-5 w-5" aria-hidden />}
         />
         <BalanceMetric
           label="Sistem kasa bakiyesi"
-          value={<AmountText value={data.summary.systemBalance} currency={data.summary.currency} showSign={false} size="lg" variant="strong" />}
+          value={<AmountText value={data.summary.systemBalance} currency={data.summary.currency} showSign size="lg" variant="strong" />}
           detail={data.selectedAccount ? data.selectedAccount.name : "Seçili para birimindeki toplam"}
           icon={<WalletCards className="h-5 w-5" aria-hidden />}
         />

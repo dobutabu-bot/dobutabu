@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { ArrowLeft, Download, Eye, FileQuestion, Link2, Pencil, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
@@ -129,10 +129,10 @@ function DocumentActions({ documentId }: { documentId: string }) {
         <Pencil className="h-4 w-4" aria-hidden />
         Bağla / Düzenle
       </Link>
-      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
+      <a href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Download className="h-4 w-4" aria-hidden />
         İndir
-      </Link>
+      </a>
       <ConfirmActionButton
         endpoint={`/api/documents/${documentId}`}
         label="Sil"

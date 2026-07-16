@@ -67,8 +67,9 @@ test.describe("V3 release gates", () => {
         await assertTouchTargets(page);
 
         if (route === "/dashboard") {
-          await expect(page.locator("main").getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
-          await expect(page.getByText("Toplam kasa").first()).toBeVisible();
+          await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+          await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
+          await expect(page.getByTestId("v5-monthly-metric-cards").locator("article")).toHaveCount(5);
         }
 
         if (route === "/documents") {
@@ -84,7 +85,7 @@ test.describe("V3 release gates", () => {
         }
 
         if (route === "/reports") {
-          await expect(page.locator("main").getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
+          await expect(page.locator("main").getByRole("heading", { name: "Dijital Finans Analiz Merkezi" })).toBeVisible();
         }
       }
 
@@ -349,8 +350,8 @@ async function loginByCookie(page: Page) {
   ]);
 
   await gotoRoute(page, "/dashboard");
-  await waitForBodyText(page, "Dijital Kasa");
-  await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
+  await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+  await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
 }
 
 async function gotoRoute(page: Page, route: string) {
@@ -388,14 +389,6 @@ async function waitForBodyReady(page: Page) {
 async function waitForClientRouteSettled(page: Page) {
   await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
   await page.waitForTimeout(100);
-}
-
-async function waitForBodyText(page: Page, text: string) {
-  await page.waitForFunction(
-    (expectedText) => document.body.innerText.includes(expectedText),
-    text,
-    { timeout: 30_000 }
-  );
 }
 
 function isExpectedPath(url: string, route: string) {

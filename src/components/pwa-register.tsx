@@ -9,19 +9,7 @@ export function PwaRegister() {
     }
 
     if (process.env.NODE_ENV !== "production") {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => {
-          registration.unregister().catch(() => undefined);
-        });
-      });
-
-      if ("caches" in window) {
-        window.caches.keys().then((keys) => {
-          keys.forEach((key) => {
-            window.caches.delete(key).catch(() => undefined);
-          });
-        });
-      }
+      void clearDevelopmentPwaState();
 
       return;
     }
@@ -61,4 +49,21 @@ export function PwaRegister() {
   }, []);
 
   return null;
+}
+
+async function clearDevelopmentPwaState() {
+  const wasControlled = Boolean(navigator.serviceWorker.controller);
+  const registrations = await navigator.serviceWorker.getRegistrations().catch(() => []);
+  await Promise.allSettled(registrations.map((registration) => registration.unregister()));
+
+  if ("caches" in window) {
+    const keys = await window.caches.keys().catch(() => []);
+    await Promise.allSettled(keys.map((key) => window.caches.delete(key)));
+  }
+
+  const reloadKey = "buro-finans-dev-pwa-cleanup-v1";
+  if (wasControlled && window.sessionStorage.getItem(reloadKey) !== "done") {
+    window.sessionStorage.setItem(reloadKey, "done");
+    window.location.reload();
+  }
 }

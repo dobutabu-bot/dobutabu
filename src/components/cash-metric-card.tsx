@@ -16,7 +16,7 @@ export function CashMetricCard({ label, amount, currency = "TRY", icon: Icon, to
   return (
     <div
       className={cn(
-        "rounded-2xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+        "flex h-full min-w-0 flex-col rounded-2xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
         tone === "green" && "border-emerald-200 bg-emerald-50/85",
         tone === "rose" && "border-rose-200 bg-rose-50/85",
         tone === "neutral" && "border-slate-200 bg-white/70"
@@ -30,8 +30,8 @@ export function CashMetricCard({ label, amount, currency = "TRY", icon: Icon, to
         ) : null}
         <p className="truncate text-[11px] font-semibold uppercase tracking-[0.10em] text-slate-500">{label}</p>
       </div>
-      <p className="mt-2 truncate text-sm">
-        <AmountText value={amount} currency={currency} showSign={showSign} />
+      <p className="mt-2 min-w-0 overflow-hidden text-sm">
+        <AmountText value={amount} currency={currency} showSign={showSign} compact={Math.abs(amount) >= 1_000_000} />
       </p>
     </div>
   );

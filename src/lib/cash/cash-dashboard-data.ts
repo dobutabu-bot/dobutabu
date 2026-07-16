@@ -153,26 +153,29 @@ export async function getUpcomingCashReminders(userId: string): Promise<Upcoming
 }
 
 async function getCashInOut(userId: string, start: Date, end: Date): Promise<CashSummaryData> {
-  const entries = await prisma.cashLedgerEntry.findMany({
+  const grouped = await prisma.cashLedgerEntry.groupBy({
+    by: ["direction"],
     where: {
       userId,
       deletedAt: null,
       cashAccount: { deletedAt: null },
       date: { gte: start, lte: end }
     },
-    select: { direction: true, amount: true }
+    _sum: { amount: true },
+    _count: { _all: true }
   });
-  const totals = entries.reduce(
-    (current, entry) => {
-      if (entry.direction === "IN") {
-        current.inTotal = current.inTotal.plus(entry.amount);
-      } else {
-        current.outTotal = current.outTotal.plus(entry.amount);
-      }
-      return current;
-    },
-    { inTotal: new Prisma.Decimal(0), outTotal: new Prisma.Decimal(0) }
-  );
+  const totals = { inTotal: new Prisma.Decimal(0), outTotal: new Prisma.Decimal(0), movementCount: 0 };
+
+  for (const row of grouped) {
+    const amount = row._sum.amount ?? new Prisma.Decimal(0);
+    totals.movementCount += row._count._all;
+    if (row.direction === "IN") {
+      totals.inTotal = totals.inTotal.plus(amount);
+    } else {
+      totals.outTotal = totals.outTotal.plus(amount);
+    }
+  }
+
   const net = totals.inTotal.minus(totals.outTotal);
   const netNumber = toNumber(net);
 
@@ -180,7 +183,7 @@ async function getCashInOut(userId: string, start: Date, end: Date): Promise<Cas
     inTotal: toNumber(totals.inTotal),
     outTotal: toNumber(totals.outTotal),
     net: netNumber,
-    movementCount: entries.length,
+    movementCount: totals.movementCount,
     inTotalLabel: formatSignedMoney(totals.inTotal),
     outTotalLabel: formatSignedMoney(-totals.outTotal),
     netLabel: formatSignedMoney(net),

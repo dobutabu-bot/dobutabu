@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import type { ButtonHTMLAttributes, AnchorHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";

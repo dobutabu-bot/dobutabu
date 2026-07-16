@@ -170,33 +170,98 @@ export async function getFinanceTickerData(userId: string): Promise<DashboardTic
   ];
 }
 
-export async function getTopBalanceClients(userId: string): Promise<TopBalanceClient[]> {
-  const core = await getDashboardCoreData(userId);
-
-  return core.clientsForBalances
-    .map((client) => {
-      const openDocumentTotal = client.documents.reduce((sum, row) => sum + toNumber(row.netAmount), 0);
-      const clientExpenseTotal = client.expenses.reduce((sum, row) => sum + toNumber(row.amount), 0);
-      const advanceTotal = client.incomes.reduce((sum, row) => sum + toNumber(row.amount), 0);
-      const balance = openDocumentTotal + clientExpenseTotal - advanceTotal;
-
-      return {
-        id: client.id,
-        name: client.name,
-        balance,
-        balanceLabel: formatMoney(balance),
-        openDocumentTotal,
-        openDocumentTotalLabel: formatMoney(openDocumentTotal),
-        clientExpenseTotal,
-        clientExpenseTotalLabel: formatMoney(clientExpenseTotal),
-        advanceTotal,
-        advanceTotalLabel: formatMoney(advanceTotal)
-      };
+export const getTopBalanceClients = cache(async (userId: string): Promise<TopBalanceClient[]> => {
+  const activeCaseWhere = { status: { not: "ARCHIVED" as const }, archivedAt: null, deletedAt: null };
+  const [openDocuments, reimbursableExpenses, advanceIncomes] = await Promise.all([
+    prisma.invoiceOrReceipt.groupBy({
+      by: ["clientId"],
+      where: {
+        userId,
+        deletedAt: null,
+        client: { archivedAt: null, deletedAt: null },
+        OR: [{ caseFileId: null }, { caseFile: activeCaseWhere }],
+        status: { in: ["ISSUED", "UNPAID"] }
+      },
+      _sum: { netAmount: true }
+    }),
+    prisma.expense.groupBy({
+      by: ["clientId"],
+      where: {
+        userId,
+        deletedAt: null,
+        clientId: { not: null },
+        isClientExpense: true,
+        client: { archivedAt: null, deletedAt: null },
+        OR: [{ caseFileId: null }, { caseFile: activeCaseWhere }]
+      },
+      _sum: { amount: true }
+    }),
+    prisma.income.groupBy({
+      by: ["clientId"],
+      where: {
+        userId,
+        deletedAt: null,
+        category: "ADVANCE",
+        client: { archivedAt: null, deletedAt: null },
+        OR: [{ caseFileId: null }, { caseFile: activeCaseWhere }]
+      },
+      _sum: { amount: true }
     })
-    .filter((client) => client.balance !== 0)
+  ]);
+  const grouped = new Map<string, { openDocumentTotal: number; clientExpenseTotal: number; advanceTotal: number }>();
+
+  for (const row of openDocuments) {
+    grouped.set(row.clientId, {
+      ...(grouped.get(row.clientId) ?? emptyClientBalanceParts()),
+      openDocumentTotal: toNumber(row._sum.netAmount)
+    });
+  }
+
+  for (const row of reimbursableExpenses) {
+    if (!row.clientId) continue;
+    grouped.set(row.clientId, {
+      ...(grouped.get(row.clientId) ?? emptyClientBalanceParts()),
+      clientExpenseTotal: toNumber(row._sum.amount)
+    });
+  }
+
+  for (const row of advanceIncomes) {
+    grouped.set(row.clientId, {
+      ...(grouped.get(row.clientId) ?? emptyClientBalanceParts()),
+      advanceTotal: toNumber(row._sum.amount)
+    });
+  }
+
+  const ranked = [...grouped.entries()]
+    .map(([clientId, totals]) => ({
+      clientId,
+      ...totals,
+      balance: totals.openDocumentTotal + totals.clientExpenseTotal - totals.advanceTotal
+    }))
+    .filter((row) => row.balance !== 0)
     .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
     .slice(0, 5);
-}
+  const clients = await prisma.client.findMany({
+    where: { userId, id: { in: ranked.map((row) => row.clientId) }, archivedAt: null, deletedAt: null },
+    select: { id: true, name: true }
+  });
+  const clientMap = new Map(clients.map((client) => [client.id, client.name]));
+
+  return ranked
+    .filter((row) => clientMap.has(row.clientId))
+    .map((row) => ({
+      id: row.clientId,
+      name: clientMap.get(row.clientId) ?? "-",
+      balance: row.balance,
+      balanceLabel: formatMoney(row.balance),
+      openDocumentTotal: row.openDocumentTotal,
+      openDocumentTotalLabel: formatMoney(row.openDocumentTotal),
+      clientExpenseTotal: row.clientExpenseTotal,
+      clientExpenseTotalLabel: formatMoney(row.clientExpenseTotal),
+      advanceTotal: row.advanceTotal,
+      advanceTotalLabel: formatMoney(row.advanceTotal)
+    }));
+});
 
 export async function getRecentTransactions(userId: string) {
   const core = await getDashboardCoreData(userId);
@@ -256,7 +321,16 @@ export async function getDashboardMetricDrilldowns(userId: string) {
       },
       take: 5,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      include: { client: true, caseFile: true }
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        date: true,
+        createdAt: true,
+        category: true,
+        client: { select: { name: true } },
+        caseFile: { select: { title: true } }
+      }
     }),
     prisma.expense.findMany({
       where: {
@@ -270,7 +344,16 @@ export async function getDashboardMetricDrilldowns(userId: string) {
       },
       take: 5,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      include: { client: true, caseFile: true }
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        date: true,
+        createdAt: true,
+        category: true,
+        client: { select: { name: true } },
+        caseFile: { select: { title: true } }
+      }
     }),
     getLedgerEntries({ userId, startDate: todayInput, endDate: todayInput, take: 10 }),
     getLedgerEntries({ userId, startDate: monthInput, endDate: todayInput, take: 10 }),
@@ -607,7 +690,6 @@ const getDashboardCoreData = cache(async (userId: string) => {
     chartExpenses,
     latestIncomes,
     latestExpenses,
-    clientsForBalances,
     reminderCandidates,
     latestAuditLogs,
     monthDocumentTax,
@@ -709,7 +791,15 @@ const getDashboardCoreData = cache(async (userId: string) => {
       },
       take: 10,
       orderBy: { date: "desc" },
-      include: { client: true, caseFile: true }
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        date: true,
+        category: true,
+        client: { select: { name: true } },
+        caseFile: { select: { title: true } }
+      }
     }),
     prisma.expense.findMany({
       where: {
@@ -722,32 +812,14 @@ const getDashboardCoreData = cache(async (userId: string) => {
       },
       take: 10,
       orderBy: { date: "desc" },
-      include: { client: true, caseFile: true }
-    }),
-    prisma.client.findMany({
-      where: { userId, archivedAt: null, deletedAt: null },
-      include: {
-        documents: {
-          where: {
-            deletedAt: null,
-            OR: [{ caseFileId: null }, { caseFile: { status: { not: "ARCHIVED" }, archivedAt: null, deletedAt: null } }],
-            status: { in: ["ISSUED", "UNPAID"] }
-          }
-        },
-        expenses: {
-          where: {
-            deletedAt: null,
-            isClientExpense: true,
-            OR: [{ caseFileId: null }, { caseFile: { status: { not: "ARCHIVED" }, archivedAt: null, deletedAt: null } }]
-          }
-        },
-        incomes: {
-          where: {
-            deletedAt: null,
-            category: "ADVANCE",
-            OR: [{ caseFileId: null }, { caseFile: { status: { not: "ARCHIVED" }, archivedAt: null, deletedAt: null } }]
-          }
-        }
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        date: true,
+        category: true,
+        client: { select: { name: true } },
+        caseFile: { select: { title: true } }
       }
     }),
     prisma.taskReminder.findMany({
@@ -762,7 +834,11 @@ const getDashboardCoreData = cache(async (userId: string) => {
         ]
       },
       orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
-      include: { relatedClient: true, relatedCaseFile: true, cashAccount: { select: { name: true } } }
+      include: {
+        relatedClient: { select: { name: true } },
+        relatedCaseFile: { select: { title: true } },
+        cashAccount: { select: { name: true } }
+      }
     }),
     prisma.auditLog.findMany({
       where: { userId },
@@ -829,7 +905,6 @@ const getDashboardCoreData = cache(async (userId: string) => {
     chartExpenses,
     latestIncomes,
     latestExpenses,
-    clientsForBalances,
     reminderCandidates,
     latestAuditLogs,
     monthDocumentTax,
@@ -837,6 +912,14 @@ const getDashboardCoreData = cache(async (userId: string) => {
     unpaidDocumentCount
   };
 });
+
+function emptyClientBalanceParts() {
+  return {
+    openDocumentTotal: 0,
+    clientExpenseTotal: 0,
+    advanceTotal: 0
+  };
+}
 
 function totalsFromAggregates(
   collectionAggregate: { _sum: { amount: unknown } },

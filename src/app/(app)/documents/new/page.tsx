@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { DocumentUploadForm } from "@/components/document-upload-form";
 import { requireUser } from "@/lib/auth";

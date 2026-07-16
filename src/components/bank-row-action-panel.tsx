@@ -3,8 +3,12 @@
 import { RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { TouchActionButton } from "@/components/touch-action-button";
+import { showToast } from "@/components/toast";
+import { apiRequest, clientErrorMessage } from "@/lib/client-api";
+import { emitAppDataMutation } from "@/lib/client-sync";
 
 type BankRowActionPanelProps = {
   row: {
@@ -87,6 +91,13 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
   const [matchTargetType, setMatchTargetType] = useState<MatchTargetType>(row.direction === "IN" ? "INCOME" : "EXPENSE");
   const [matchTargetId, setMatchTargetId] = useState("");
   const [form, setForm] = useState<CreateFormState>(() => defaultCreateForm(row, options));
+  const suggestedClient = options.clients.find((client) => client.id === row.clientSuggestionId);
+  const suggestedCaseFile = options.caseFiles.find((caseFile) => caseFile.id === row.caseFileSuggestionId);
+  const bankSuggestions = [
+    suggestedClient ? `Müvekkil: ${suggestedClient.name}` : null,
+    suggestedCaseFile ? `Dosya: ${suggestedCaseFile.title}` : null,
+    row.category ? `Kategori: ${row.category}` : null
+  ].filter((item): item is string => Boolean(item));
 
   const filteredCaseFiles = useMemo(() => {
     if (!form.clientId) return options.caseFiles;
@@ -143,7 +154,7 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
 
     setPending(true);
     try {
-      const response = await fetch("/api/reconciliation/create-from-row", {
+      await apiRequest("/api/reconciliation/create-from-row", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,14 +171,13 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
           expenseCategory: createMode === "EXPENSE" ? form.expenseCategory : null,
           isClientExpense: createMode === "EXPENSE" ? form.isClientExpense : null
         })
-      });
-      const result = (await response.json().catch(() => ({}))) as { message?: string };
-      if (!response.ok) {
-        window.alert(result.message ?? "Kayıt oluşturulamadı.");
-        return;
-      }
+      }, "Kayıt oluşturulamadı.");
+      showToast("Banka hareketinden kayıt oluşturuldu.");
+      emitAppDataMutation("bank-row-create");
       closePanels();
       router.refresh();
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setPending(false);
     }
@@ -179,24 +189,23 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
 
     const targetId = matchTargetId || matchOptions[0]?.id || "";
     if (!targetId) {
-      window.alert("Eşleştirilecek kayıt bulunamadı.");
+      showToast("Eşleştirilecek kayıt bulunamadı.");
       return;
     }
 
     setPending(true);
     try {
-      const response = await fetch("/api/reconciliation/match", {
+      await apiRequest("/api/reconciliation/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bankRowId: row.id, targetType: matchTargetType, targetId, matchMode: "MANUALLY_MATCHED" })
-      });
-      const result = (await response.json().catch(() => ({}))) as { message?: string };
-      if (!response.ok) {
-        window.alert(result.message ?? "Eşleştirme yapılamadı.");
-        return;
-      }
+      }, "Eşleştirme yapılamadı.");
+      showToast("Banka hareketi eşleştirildi.");
+      emitAppDataMutation("bank-row-match");
       closePanels();
       router.refresh();
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setPending(false);
     }
@@ -248,6 +257,15 @@ export function BankRowActionPanel({ row, options, systemMovements }: BankRowAct
         <Modal title={createTitle(createMode)} onClose={closePanels}>
           <form onSubmit={submitCreate} className="min-w-0 space-y-4">
             <BankRowSummary row={row} />
+            {bankSuggestions.length > 0 ? (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+                <p className="font-semibold">Akıllı öneri</p>
+                <p className="mt-1 break-words text-blue-800">{bankSuggestions.join(" · ")}</p>
+                <p className="mt-1 text-xs text-blue-700">
+                  Banka açıklamasından önerildi. Alanları değiştirebilirsiniz; kayıt yalnız Onayla ve Oluştur ile oluşur.
+                </p>
+              </div>
+            ) : null}
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <Field label="Tarih">
                 <input className="field" type="date" value={form.date} onChange={(event) => setFormValue("date", event.target.value)} required />
@@ -415,7 +433,7 @@ function defaultCreateForm(row: BankRowActionPanelProps["row"], options: BankRow
   return {
     clientId: row.clientSuggestionId ?? "",
     caseFileId: row.caseFileSuggestionId ?? "",
-    cashAccountId: row.cashAccountId ?? options.cashAccounts[0]?.id ?? "",
+    cashAccountId: row.cashAccountId ?? options.cashAccounts.find((account) => account.isDefault)?.id ?? options.cashAccounts[0]?.id ?? "",
     amount: String(row.amount || ""),
     currency: row.currency || "TRY",
     date: row.date ?? "",
@@ -479,7 +497,7 @@ function Field({ label, children, className = "" }: { label: string; children: R
 }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="max-h-[92dvh] w-full max-w-[100vw] min-w-0 overflow-y-auto rounded-t-3xl border border-white/70 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-w-[min(42rem,calc(100vw-2rem))] sm:rounded-3xl sm:p-5">
         <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
@@ -493,7 +511,8 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -504,18 +523,17 @@ function PostButton({ endpoint, payload, label, onDone }: { endpoint: string; pa
   async function run() {
     setPending(true);
     try {
-      const response = await fetch(endpoint, {
+      await apiRequest(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      });
-      const result = (await response.json().catch(() => ({}))) as { message?: string };
-      if (!response.ok) {
-        window.alert(result.message ?? "İşlem tamamlanamadı.");
-        return;
-      }
+      }, "İşlem tamamlanamadı.");
+      showToast(`${label} işlemi tamamlandı.`);
+      emitAppDataMutation("bank-row-action");
       onDone?.();
       router.refresh();
+    } catch (error) {
+      showToast(clientErrorMessage(error, "Bağlantı sırasında sorun oluştu. Lütfen tekrar deneyin."));
     } finally {
       setPending(false);
     }

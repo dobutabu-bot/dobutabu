@@ -1,5 +1,5 @@
 import { Download, History, LineChart, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
 import { CapitalSnapshotButton } from "@/components/capital-snapshot-button";
@@ -56,14 +56,14 @@ export function CapitalHistoryScreen({ data }: { data: CapitalCenterData }) {
             <p className="mt-1 text-xs text-slate-500">Manuel değer güncellemeleri ve ileride import/sistem kaynaklı kayıtlar burada izlenir.</p>
           </div>
           <div className="flex min-w-0 flex-wrap gap-2">
-            <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
+            <a href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
-            </Link>
-            <Link href="/api/reports/capital/pdf" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
+            </a>
+            <a href="/api/reports/capital/pdf" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               PDF indir
-            </Link>
+            </a>
           </div>
         </div>
         {data.latestValuations.length === 0 ? (
@@ -78,7 +78,7 @@ export function CapitalHistoryScreen({ data }: { data: CapitalCenterData }) {
               { header: "Tür", cell: (row) => row.assetTypeLabel },
               { header: "Miktar", cell: (row) => row.quantity?.toLocaleString("tr-TR", { maximumFractionDigits: 8 }) ?? "-" },
               { header: "Birim Fiyat", cell: (row) => (row.unitPrice != null ? formatMoney(row.unitPrice, row.valuationCurrency) : "-") },
-              { header: "Toplam", cell: (row) => <AmountText value={row.totalValue} currency={row.valuationCurrency} showSign={false} size="sm" variant="strong" /> },
+              { header: "Toplam", cell: (row) => <AmountText value={row.totalValue} currency={row.valuationCurrency} showSign size="sm" variant="strong" /> },
               { header: "Kaynak", cell: (row) => assetValuationSourceLabels[row.source] },
               { header: "Not", cell: (row) => row.note || "-" }
             ]}

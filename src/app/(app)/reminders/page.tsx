@@ -1,10 +1,14 @@
-import { BellRing, CalendarClock, CheckCircle2, Clock3 } from "lucide-react";
+import type { Prisma } from "@prisma/client";
+import { BellRing, CalendarClock, Clock3, Search } from "lucide-react";
+import Link from "@/components/app-link";
 
 import { ActionButtons } from "@/components/action-buttons";
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
 import type { EntityFormField } from "@/components/entity-form";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { Panel, StackedList } from "@/components/panel";
 import { RecordCreateButton } from "@/components/record-create-button";
 import { RecordEditButton } from "@/components/record-edit-button";
@@ -13,64 +17,105 @@ import { ReminderStatusButton } from "@/components/reminder-status-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { expenseCategoryLabels, reminderPriorityLabels, reminderStatusLabels, reminderTypeLabels, toOptions } from "@/lib/labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { getReminderFormOptions } from "@/lib/reminders/reminder-data";
 import { addDays, dateInputValue, formatDate, formatDirectionalMoney, startOfDay } from "@/lib/utils";
 
-export default async function RemindersPage() {
+type RemindersPageProps = {
+  searchParams: Promise<{ q?: string; page?: string }>;
+};
+
+export default async function RemindersPage({ searchParams }: RemindersPageProps) {
   const user = await requireUser();
+  const params = await searchParams;
+  const query = params.q?.trim() ?? "";
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
+  const where: Prisma.TaskReminderWhereInput = {
+    userId: user.id,
+    deletedAt: null,
+    ...(query
+      ? {
+          OR: [
+            { title: { contains: query } },
+            { description: { contains: query } },
+            { relatedClient: { name: { contains: query } } },
+            { relatedCaseFile: { title: { contains: query } } }
+          ]
+        }
+      : {})
+  };
   const today = startOfDay(new Date());
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  const [reminders, formOptions] = await Promise.all([
+  const [reminders, totalCount, allReminderStates, formOptions] = await Promise.all([
+    prisma.taskReminder.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }],
+      skip: pagination.skip,
+      take: pagination.take,
+      include: { relatedClient: true, relatedCaseFile: true, cashAccount: { select: { id: true, name: true } } }
+    }),
+    prisma.taskReminder.count({ where }),
     prisma.taskReminder.findMany({
       where: { userId: user.id, deletedAt: null },
       orderBy: [{ status: "asc" }, { dueDate: "asc" }],
+      take: 100,
       include: { relatedClient: true, relatedCaseFile: true, cashAccount: { select: { id: true, name: true } } }
     }),
     getReminderFormOptions(user.id)
   ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
   const { clientOptions, caseOptions, cashAccountOptions, defaultCashAccountId } = formOptions;
   const fields = reminderFields(clientOptions, caseOptions, cashAccountOptions);
   const paymentFields = reminderPaymentFields(cashAccountOptions);
 
-  const openReminders = reminders.filter((reminder) => reminder.status === "OPEN");
+  const openReminders = allReminderStates.filter((reminder) => reminder.status === "OPEN");
   const todayReminders = openReminders.filter((reminder) => reminder.dueDate >= today && reminder.dueDate < tomorrow);
   const overdueReminders = openReminders.filter((reminder) => reminder.dueDate < today);
   const approachingReminders = openReminders.filter(
     (reminder) =>
       reminder.notificationEnabled && reminder.dueDate >= today && reminder.dueDate <= addDays(today, reminder.notifyBeforeDays)
   );
-  const doneReminders = reminders.filter((reminder) => reminder.status === "DONE");
-  const cancelledReminders = reminders.filter((reminder) => reminder.status === "CANCELLED");
 
   return (
     <div className="space-y-5">
-      <section className="surface-dark flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase text-slate-400">Operasyon kontrol merkezi</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">Hatırlatmalar</h1>
-          <p className="mt-2 text-sm text-slate-300">Vade, tahsilat, gider, dosya ve vergi takibi</p>
-        </div>
-        <RecordCreateButton
-          label="Hatırlatma Ekle"
-          title="Hatırlatma Ekle"
-          endpoint="/api/reminders"
-          schemaKey="reminder"
-          autoOpenParam="create"
-          submitLabel="Hatırlatma ekle"
-          defaults={reminderCreateDefaults(defaultCashAccountId)}
-          fields={fields}
-          successMessage="Hatırlatma oluşturuldu."
-        />
-      </section>
+      <PageHeader
+        eyebrow="Operasyon kontrol merkezi"
+        title="Hatırlatmalar"
+        description="Vade, tahsilat, gider, dosya ve vergi takiplerini sayfalı ve mobil uyumlu listede yönetin."
+        actions={
+          <RecordCreateButton
+            label="Hatırlatma Ekle"
+            title="Hatırlatma Ekle"
+            endpoint="/api/reminders"
+            schemaKey="reminder"
+            autoOpenParam="create"
+            submitLabel="Hatırlatma ekle"
+            defaults={reminderCreateDefaults(defaultCashAccountId)}
+            fields={fields}
+            successMessage="Hatırlatma oluşturuldu."
+          />
+        }
+      />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-3">
         <MetricCard title="Açık Hatırlatma" value={String(openReminders.length)} detail="Takip bekleyen kayıtlar" icon={BellRing} tone="green" />
         <MetricCard title="Yaklaşıyor" value={String(approachingReminders.length)} detail={`${todayReminders.length} kayıt bugün vadeli`} icon={CalendarClock} tone="amber" />
         <MetricCard title="Geciken" value={String(overdueReminders.length)} detail="Vadesi geçen açık kayıtlar" icon={Clock3} tone="rose" />
-        <MetricCard title="Kapanan" value={String(doneReminders.length + cancelledReminders.length)} detail={`${doneReminders.length} tamamlandı · ${cancelledReminders.length} iptal`} icon={CheckCircle2} tone="neutral" />
+      </section>
+
+      <section className="surface p-4">
+        <form className="flex min-w-0 flex-col gap-2 sm:flex-row" action="/reminders">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Arama</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+            <input className="field pl-10" name="q" defaultValue={query} placeholder="Başlık, açıklama, müvekkil veya dosya ara" />
+          </label>
+          <button className="primary-action min-h-11 justify-center" type="submit">Ara</button>
+          {query ? <Link href="/reminders" className="secondary-action min-h-11 justify-center">Temizle</Link> : null}
+        </form>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -112,14 +157,6 @@ export default async function RemindersPage() {
                 "-"
               )
           },
-          {
-            header: "Kasa",
-            cell: (row) => (row.reminderType === "EXPENSE" ? row.cashAccount?.name ?? "Varsayılan kasa" : "-")
-          },
-          { header: "Müvekkil", cell: (row) => row.relatedClient?.name ?? "-" },
-          { header: "Dosya", cell: (row) => row.relatedCaseFile?.title ?? "-" },
-          { header: "Öncelik", cell: (row) => reminderPriorityLabels[row.priority] },
-          { header: "Uyarı", cell: (row) => (row.notificationEnabled ? `${row.notifyBeforeDays} gün önce` : "Kapalı") },
           {
             header: "Durum",
             cell: (row) => {
@@ -175,6 +212,14 @@ export default async function RemindersPage() {
             }
           }
         ]}
+      />
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) => createPageHref("/reminders", { q: query }, page)}
       />
     </div>
   );
@@ -245,16 +290,18 @@ function ReminderListItem({
 
 function reminderFields(
   clientOptions: { label: string; value: string }[],
-  caseOptions: { label: string; value: string }[],
+  caseOptions: { label: string; value: string; parentValue?: string; searchTerms?: string[] }[],
   cashAccountOptions: { label: string; value: string }[]
 ): EntityFormField[] {
   return [
     { name: "title", label: "Başlık", placeholder: "Örn. KDV ödemesi veya avans kontrolü" },
+    { name: "dueDate", label: "Vade Tarihi", type: "date" },
     { name: "reminderType", label: "Hatırlatma türü", type: "select", options: toOptions(reminderTypeLabels) },
     {
       name: "amount",
       label: "Tutar",
       type: "number",
+      section: "advanced",
       step: "0.01",
       min: "0",
       placeholder: "Örn. 12500",
@@ -271,6 +318,7 @@ function reminderFields(
     {
       name: "currency",
       label: "Para Birimi",
+      section: "advanced",
       placeholder: "TRY",
       showWhen: { field: "reminderType", values: ["EXPENSE", "COLLECTION", "INVOICE", "TAX"] }
     },
@@ -278,6 +326,7 @@ function reminderFields(
       name: "cashAccountId",
       label: "Bu gider hangi kasadan ödenecek?",
       type: "select",
+      section: "advanced",
       options: cashAccountOptions,
       showWhen: { field: "reminderType", values: ["EXPENSE"] },
       highlightWhen: { field: "reminderType", values: ["EXPENSE"] },
@@ -289,11 +338,11 @@ function reminderFields(
         }
       ]
     },
-    { name: "dueDate", label: "Vade Tarihi", type: "date" },
     {
       name: "notifyBeforeDays",
       label: "Uyarı zamanı",
       type: "select",
+      section: "advanced",
       options: [
         { label: "1 gün önce", value: "1" },
         { label: "3 gün önce", value: "3" },
@@ -305,16 +354,18 @@ function reminderFields(
       name: "notificationEnabled",
       label: "Bildirim aktif mi?",
       type: "select",
+      section: "advanced",
       options: [
         { label: "Açık", value: "true" },
         { label: "Kapalı", value: "false" }
       ]
     },
-    { name: "priority", label: "Öncelik", type: "select", options: toOptions(reminderPriorityLabels) },
+    { name: "priority", label: "Öncelik", type: "select", options: toOptions(reminderPriorityLabels), section: "advanced" },
     {
       name: "status",
       label: "Durum",
       type: "select",
+      section: "advanced",
       options: [
         { label: "Açık", value: "OPEN" },
         { label: "Tamamlandı", value: "DONE" },
@@ -325,6 +376,7 @@ function reminderFields(
       name: "relatedClientId",
       label: "Müvekkil",
       type: "select",
+      section: "advanced",
       options: clientOptions,
       hintWhen: [
         {
@@ -338,6 +390,7 @@ function reminderFields(
       name: "relatedCaseFileId",
       label: "Dosya",
       type: "select",
+      section: "advanced",
       options: caseOptions,
       className: "xl:col-span-2",
       hintWhen: [
@@ -352,6 +405,7 @@ function reminderFields(
       name: "description",
       label: "Açıklama",
       type: "textarea",
+      section: "advanced",
       placeholder: "Kısa not ekleyin",
       placeholderWhen: [
         {

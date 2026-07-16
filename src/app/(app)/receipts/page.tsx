@@ -1,21 +1,24 @@
 import { Prisma } from "@prisma/client";
 import { AlertTriangle, Download, Eye, FileSpreadsheet, Filter, ReceiptText, Scale } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
 import { EntityForm } from "@/components/entity-form";
 import { MetricCard } from "@/components/metric-card";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { appendReceiptFilters, receiptWhereFromFilters, type ReceiptFilters } from "@/lib/receipt-query";
 import { receiptStatusLabels, receiptTypeLabels, toOptions } from "@/lib/labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { dateInputValue, formatDate, formatMoney } from "@/lib/utils";
 
 type ReceiptsPageProps = {
-  searchParams: Promise<ReceiptFilters>;
+  searchParams: Promise<ReceiptFilters & { page?: string }>;
 };
 
 export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) {
@@ -28,9 +31,10 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
     status: params.status && params.status in receiptStatusLabels ? params.status : "",
     unpaidOnly: params.unpaidOnly === "1" ? "1" : ""
   };
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const where: Prisma.InvoiceOrReceiptWhereInput = { ...receiptWhereFromFilters(filters), userId: user.id };
 
-  const [activeClients, activeCases, filterClients, filterCases, receipts] = await Promise.all([
+  const [activeClients, activeCases, filterClients, filterCases, receipts, totalCount, totalAggregate, unpaidAggregate] = await Promise.all([
     prisma.client.findMany({ where: { userId: user.id, archivedAt: null, deletedAt: null }, orderBy: { name: "asc" } }),
     prisma.caseFile.findMany({
       where: { userId: user.id, deletedAt: null, status: { not: "ARCHIVED" }, client: { archivedAt: null, deletedAt: null } },
@@ -46,9 +50,15 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
     prisma.invoiceOrReceipt.findMany({
       where,
       orderBy: { issueDate: "desc" },
+      skip: pagination.skip,
+      take: pagination.take,
       include: { client: true, caseFile: true, relatedIncome: true }
-    })
+    }),
+    prisma.invoiceOrReceipt.count({ where }),
+    prisma.invoiceOrReceipt.aggregate({ where, _sum: { netAmount: true } }),
+    prisma.invoiceOrReceipt.aggregate({ where: { ...where, status: "UNPAID" }, _sum: { netAmount: true } })
   ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
 
   const clientOptions = [
     { label: "Seçiniz", value: "" },
@@ -100,10 +110,8 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
       value: client.id
     }))
   ];
-  const totalNet = sumByCurrency(receipts.map((row) => ({ amount: row.netAmount, currency: "TRY" })));
-  const unpaidNet = sumByCurrency(
-    receipts.filter((row) => row.status === "UNPAID").map((row) => ({ amount: row.netAmount, currency: "TRY" }))
-  );
+  const totalNet = formatMoney(totalAggregate._sum.netAmount ?? 0);
+  const unpaidNet = formatMoney(unpaidAggregate._sum.netAmount ?? 0);
   const csvParams = new URLSearchParams({ resource: "receipts", format: "csv" });
   appendReceiptFilters(csvParams, filters);
   const xlsParams = new URLSearchParams({ resource: "receipts", format: "xls" });
@@ -111,6 +119,12 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        eyebrow="Finans"
+        title="Makbuz / Fatura"
+        description="Takip amaçlı makbuz ve fatura kayıtlarını filtreleyin, dışa aktarın ve durumlarını yönetin."
+      />
+
       <section className="surface flex gap-3 border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
         <p>Bu ekran yalnızca takip amaçlıdır. Resmi e-SMM/e-Fatura işlemleri ayrıca yetkili sistemden yapılmalıdır.</p>
@@ -195,23 +209,23 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
       </section>
 
       <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1fr_1fr_1fr_auto_auto]">
-        <MetricCard title="Belge Sayısı" value={String(receipts.length)} icon={ReceiptText} />
+        <MetricCard title="Belge Sayısı" value={String(totalCount)} detail={`${pagination.pageSize} kayıt / sayfa`} icon={ReceiptText} />
         <MetricCard title="Toplam Net" value={totalNet} icon={Scale} tone="green" />
         <MetricCard title="Ödenmeyen Net" value={unpaidNet} icon={AlertTriangle} tone="amber" />
-        <Link
+        <a
           href={`/api/export?${csvParams.toString()}`}
           className="surface flex min-h-[96px] items-center justify-center gap-2 px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
         >
           <Download className="h-4 w-4" aria-hidden />
           CSV indir
-        </Link>
-        <Link
+        </a>
+        <a
           href={`/api/export?${xlsParams.toString()}`}
           className="surface flex min-h-[96px] items-center justify-center gap-2 px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
         >
           <FileSpreadsheet className="h-4 w-4" aria-hidden />
           Excel indir
-        </Link>
+        </a>
       </section>
 
       <DataTable
@@ -220,25 +234,23 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
         columns={[
           { header: "Tarih", cell: (row) => formatDate(row.issueDate) },
           { header: "Müvekkil", cell: (row) => row.client.name },
-          { header: "Dosya", cell: (row) => row.caseFile?.title ?? "-" },
           { header: "Belge No", cell: (row) => row.number },
           { header: "Tür", cell: (row) => receiptTypeLabels[row.type] },
           {
             header: "Durum",
             cell: (row) => <StatusBadge tone={receiptStatusTone(row.status)}>{receiptStatusLabels[row.status]}</StatusBadge>
           },
-          { header: "Brüt", cell: (row) => formatMoney(row.grossAmount) },
-          { header: "KDV", cell: (row) => (row.vatAmount == null ? "-" : formatMoney(row.vatAmount)) },
-          { header: "Stopaj", cell: (row) => (row.withholdingAmount == null ? "-" : formatMoney(row.withholdingAmount)) },
           { header: "Net", cell: (row) => formatMoney(row.netAmount), className: "font-medium text-slate-950" },
-          { header: "Tahsilat Bağı", cell: (row) => (row.relatedIncomeId ? "Bağlı" : "Hazır") },
           {
             header: "İşlem",
             cell: (row) => (
               <div className="flex flex-wrap gap-2">
-                <Link href={`/receipts/${row.id}`} className="secondary-action min-h-10 px-3">
+                <Link href={`/receipts/${row.id}`} className="secondary-action min-h-11 px-3">
                   <Eye className="h-4 w-4" aria-hidden />
                   Detay
+                </Link>
+                <Link href={`/documents/new?linkedInvoiceOrReceiptId=${row.id}`} className="secondary-action min-h-11 px-3">
+                  Belge bağla
                 </Link>
                 <RecordEditButton
                   title="Makbuz / Fatura Düzenle"
@@ -273,26 +285,27 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
           }
         ]}
       />
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) =>
+          createPageHref(
+            "/receipts",
+            {
+              startDate: filters.startDate,
+              endDate: filters.endDate,
+              clientId: filters.clientId,
+              status: filters.status,
+              unpaidOnly: filters.unpaidOnly
+            },
+            page
+          )
+        }
+      />
     </div>
-  );
-}
-
-type MoneyRow = {
-  amount: Prisma.Decimal;
-  currency: "TRY";
-};
-
-function sumByCurrency(rows: MoneyRow[]) {
-  const totals = rows.reduce((map, row) => {
-    const current = map.get(row.currency) ?? new Prisma.Decimal(0);
-    map.set(row.currency, current.plus(row.amount));
-    return map;
-  }, new Map<string, Prisma.Decimal>());
-
-  return (
-    Array.from(totals.entries())
-      .map(([currency, amount]) => formatMoney(amount, currency))
-      .join(" · ") || formatMoney(0)
   );
 }
 

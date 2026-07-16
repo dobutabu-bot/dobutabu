@@ -16,11 +16,12 @@ export function emitAppDataMutation(reason = "data-change") {
   }
 }
 
-export function subscribeAppDataMutation(callback: () => void) {
+export function subscribeAppDataMutation(callback: () => void, options: { includeSameTab?: boolean } = {}) {
   if (typeof window === "undefined") {
     return () => undefined;
   }
 
+  const includeSameTab = options.includeSameTab ?? true;
   const onMutation = () => callback();
   const onStorage = (event: StorageEvent) => {
     if (event.key === appDataMutationStorageKey) {
@@ -28,11 +29,15 @@ export function subscribeAppDataMutation(callback: () => void) {
     }
   };
 
-  window.addEventListener(appDataMutationEvent, onMutation);
+  if (includeSameTab) {
+    window.addEventListener(appDataMutationEvent, onMutation);
+  }
   window.addEventListener("storage", onStorage);
 
   return () => {
-    window.removeEventListener(appDataMutationEvent, onMutation);
+    if (includeSameTab) {
+      window.removeEventListener(appDataMutationEvent, onMutation);
+    }
     window.removeEventListener("storage", onStorage);
   };
 }

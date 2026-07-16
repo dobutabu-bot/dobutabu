@@ -1,11 +1,16 @@
 import { requireApiUser, unauthorized } from "@/lib/api";
 import {
   RestoreError,
+  restoreAssetAccount,
+  restoreBankStatementImport,
+  restoreCashAccount,
   restoreCaseFile,
   restoreClient,
+  restoreDocument,
   restoreExpense,
   restoreIncome,
-  restoreInvoiceOrReceipt
+  restoreInvoiceOrReceipt,
+  restoreReminder
 } from "@/lib/restore-service";
 
 type RestoreRouteContext = {
@@ -31,6 +36,16 @@ export async function POST(_request: Request, context: RestoreRouteContext) {
       await restoreExpense(user.id, id);
     } else if (recordType === "receipts") {
       await restoreInvoiceOrReceipt(user.id, id);
+    } else if (recordType === "documents") {
+      await restoreDocument(user.id, id);
+    } else if (recordType === "bank-imports") {
+      await restoreBankStatementImport(user.id, id);
+    } else if (recordType === "cash-accounts") {
+      await restoreCashAccount(user.id, id);
+    } else if (recordType === "reminders") {
+      await restoreReminder(user.id, id);
+    } else if (recordType === "assets") {
+      await restoreAssetAccount(user.id, id);
     } else {
       return Response.json({ message: "Geri alınacak kayıt tipi desteklenmiyor." }, { status: 400 });
     }

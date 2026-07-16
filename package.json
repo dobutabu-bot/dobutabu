@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "seed:v3-realistic": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs scripts/seed-v3-realistic.ts",
+    "demo:cleanup:dry-run": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs scripts/cleanup-demo-data.ts",
+    "demo:cleanup": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs scripts/cleanup-demo-data.ts --execute",
     "staging:preflight": "bash scripts/staging-preflight.sh",
     "staging:smoke": "sh scripts/staging-smoke.sh",
     "health:check": "bash scripts/health-check.sh",
@@ -23,7 +25,9 @@
     "backup:v3": "sh scripts/backup-v3.sh",
     "restore:v3:dry-run": "sh scripts/restore-v3-dry-run.sh",
     "bundle:analyze": "node scripts/bundle-report.mjs",
+    "ui:v4:screenshots": "node scripts/capture-ui-v4-review.mjs",
     "test:e2e": "playwright test",
+    "test:final-actions": "playwright test tests/e2e/final-action-runtime.spec.ts --project=chromium-desktop",
     "test:e2e:ui": "playwright test --ui",
     "setup": "prisma generate && prisma migrate deploy && prisma db seed"
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight, CheckCircle2, Loader2 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -100,7 +100,7 @@ export function NotificationsPanel({ items }: NotificationsPanelProps) {
           </div>
           <button
             type="button"
-            className="secondary-action min-h-10 px-4"
+            className="secondary-action min-h-11 px-4"
             disabled={unreadCount === 0}
             onClick={markAllAsRead}
           >
@@ -185,18 +185,18 @@ function NotificationCard({
         <div className="grid shrink-0 gap-2 sm:grid-cols-3 lg:w-[420px]">
           <button
             type="button"
-            className={cn("secondary-action min-h-10", read && "border-emerald-200 bg-emerald-50 text-emerald-800")}
+            className={cn("secondary-action min-h-11", read && "border-emerald-200 bg-emerald-50 text-emerald-800")}
             disabled={read}
             onClick={onRead}
           >
             <CheckCircle2 className="h-4 w-4" aria-hidden />
             {read ? "Okundu" : "Okundu yap"}
           </button>
-          <button type="button" className="secondary-action min-h-10" disabled={loading} onClick={onComplete}>
+          <button type="button" className="secondary-action min-h-11" disabled={loading} onClick={onComplete}>
             <LoaderIcon className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
             {loading ? "İşleniyor" : "Tamamlandı"}
           </button>
-          <Link href="/reminders" className="primary-action min-h-10">
+          <Link href="/reminders" className="primary-action min-h-11">
             <ArrowUpRight className="h-4 w-4" aria-hidden />
             Detaya git
           </Link>

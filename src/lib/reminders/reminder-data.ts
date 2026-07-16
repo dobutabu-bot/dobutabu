@@ -54,7 +54,7 @@ export async function getReminderFormOptions(userId: string) {
         client: { archivedAt: null, deletedAt: null }
       },
       orderBy: { createdAt: "desc" },
-      select: { id: true, title: true, fileNumber: true, client: { select: { name: true } } }
+      select: { id: true, clientId: true, title: true, fileNumber: true, client: { select: { name: true } } }
     }),
     prisma.cashAccount.findMany({
       where: { userId, deletedAt: null, isActive: true },
@@ -73,7 +73,9 @@ export async function getReminderFormOptions(userId: string) {
       { label: "Dosya seçilmedi", value: "" },
       ...cases.map((caseFile) => ({
         label: `${caseFile.client.name} - ${caseFile.title}${caseFile.fileNumber ? ` (${caseFile.fileNumber})` : ""}`,
-        value: caseFile.id
+        value: caseFile.id,
+        parentValue: caseFile.clientId,
+        searchTerms: [caseFile.fileNumber ?? "", caseFile.title]
       }))
     ],
     cashAccountOptions: [

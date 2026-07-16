@@ -4,16 +4,55 @@
 
 :root {
   color-scheme: light;
-  --v2-page-bg: #f5f7fb;
-  --v2-ink: #0b1220;
-  --v2-muted: #667085;
-  --v2-border: rgba(148, 163, 184, 0.28);
-  --v2-glass: rgba(255, 255, 255, 0.76);
-  --v2-panel-dark: #08111f;
-  --v2-green: #047857;
-  --v2-rose: #be123c;
-  --v2-amber: #b45309;
-  --v2-blue: #2563eb;
+  --v4-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  --v4-bg: #f5f7fb;
+  --v4-bg-soft: #eef2f7;
+  --v4-ink: #08111f;
+  --v4-ink-strong: #020617;
+  --v4-muted: #667085;
+  --v4-muted-soft: #94a3b8;
+  --v4-surface: #ffffff;
+  --v4-surface-subtle: rgba(255, 255, 255, 0.82);
+  --v4-glass: rgba(255, 255, 255, 0.74);
+  --v4-glass-strong: rgba(255, 255, 255, 0.90);
+  --v4-border: rgba(148, 163, 184, 0.28);
+  --v4-border-strong: rgba(100, 116, 139, 0.36);
+  --v4-accent: #2f5fd7;
+  --v4-accent-soft: rgba(47, 95, 215, 0.12);
+  --v4-positive: #047857;
+  --v4-negative: #be123c;
+  --v4-warning: #b45309;
+  --v4-info: #2563eb;
+  --v4-disabled: #cbd5e1;
+  --v4-panel-dark: #08111f;
+  --v4-panel-darker: #020617;
+  --v4-radius-card: 24px;
+  --v4-radius-card-sm: 18px;
+  --v4-radius-field: 14px;
+  --v4-touch-target: 44px;
+  --v4-sidebar-width: 16rem;
+  --v4-header-height: 4.5rem;
+  --v4-content-max: 1600px;
+  --v4-space-1: 4px;
+  --v4-space-2: 8px;
+  --v4-space-3: 12px;
+  --v4-space-4: 16px;
+  --v4-space-6: 24px;
+  --v4-space-8: 32px;
+  --v4-space-12: 48px;
+  --v4-shadow-soft: 0 18px 48px rgba(15, 23, 42, 0.07);
+  --v4-shadow-card: 0 24px 70px rgba(15, 23, 42, 0.09);
+  --v4-shadow-dark: 0 34px 96px rgba(2, 6, 23, 0.32);
+  --v2-page-bg: var(--v4-bg);
+  --v2-ink: var(--v4-ink);
+  --v2-muted: var(--v4-muted);
+  --v2-border: var(--v4-border);
+  --v2-glass: var(--v4-glass);
+  --v2-panel-dark: var(--v4-panel-dark);
+  --v2-green: var(--v4-positive);
+  --v2-rose: var(--v4-negative);
+  --v2-amber: var(--v4-warning);
+  --v2-blue: var(--v4-info);
 }
 
 * {
@@ -33,10 +72,11 @@ html {
 
 body {
   min-height: 100dvh;
+  font-family: var(--v4-font-sans);
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 34rem),
     radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.10), transparent 28rem),
-    linear-gradient(180deg, #ffffff 0%, var(--v2-page-bg) 44%, #eef2f7 100%);
+    linear-gradient(180deg, var(--v4-surface) 0%, var(--v4-bg) 44%, var(--v4-bg-soft) 100%);
   color: var(--v2-ink);
   overflow-x: hidden;
   overscroll-behavior-y: auto;
@@ -87,19 +127,28 @@ svg {
 }
 
 @layer components {
+  .app-content-shell {
+    @apply mx-auto w-full min-w-0 space-y-5;
+    max-width: var(--v4-content-max);
+  }
+
   .surface {
-    @apply rounded-2xl border bg-white/80 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur-xl;
+    @apply border backdrop-blur-xl;
+    border-radius: var(--v4-radius-card-sm);
+    background: var(--v4-surface-subtle);
     border-color: var(--v2-border);
+    box-shadow: var(--v4-shadow-soft);
   }
 
   .surface-dark {
-    @apply rounded-3xl text-white;
+    @apply text-white;
+    border-radius: var(--v4-radius-card);
     background:
       linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
       radial-gradient(circle at 16% 0%, rgba(59, 130, 246, 0.20), transparent 24rem),
       radial-gradient(circle at 98% 8%, rgba(16, 185, 129, 0.13), transparent 20rem),
-      linear-gradient(135deg, #07101e 0%, #0b1424 52%, #030712 100%);
+      linear-gradient(135deg, #07101e 0%, #0b1424 52%, var(--v4-panel-darker) 100%);
     background-size: 34px 34px, 34px 34px, auto, auto, auto;
     border: 1px solid rgba(148, 163, 184, 0.14);
     box-shadow:
@@ -109,7 +158,9 @@ svg {
   }
 
   .field {
-    @apply min-h-12 w-full rounded-2xl border bg-white/90 px-3.5 py-2.5 text-base text-slate-950 outline-none transition duration-200 placeholder:text-slate-400 focus:border-slate-800 focus:ring-4 focus:ring-slate-900/10 disabled:bg-slate-100 sm:text-sm;
+    @apply w-full border bg-white/90 px-3.5 py-2.5 text-base text-slate-950 outline-none transition duration-200 placeholder:text-slate-400 focus:border-slate-800 focus:ring-4 focus:ring-slate-900/10 disabled:bg-slate-100 sm:text-sm;
+    min-height: var(--v4-touch-target);
+    border-radius: var(--v4-radius-field);
     border-color: rgba(148, 163, 184, 0.38);
   }
 
@@ -117,13 +168,22 @@ svg {
     @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500;
   }
 
+  .metric-value {
+    @apply block max-w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-semibold tabular-nums;
+    font-size: clamp(1.25rem, 2vw, 2.25rem);
+    line-height: 1.15;
+  }
+
   .icon-button {
-    @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/80 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10;
+    @apply inline-flex items-center justify-center border border-white/70 bg-white/80 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10;
+    min-width: var(--v4-touch-target);
+    min-height: var(--v4-touch-target);
+    border-radius: var(--v4-radius-field);
   }
 
   .primary-action {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(15,23,42,0.20)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:opacity-60;
-    background: linear-gradient(135deg, #07101e 0%, #0b1728 58%, #020617 100%);
+    background: linear-gradient(135deg, var(--v4-panel-dark) 0%, #0b1728 58%, var(--v4-panel-darker) 100%);
   }
 
   .secondary-action {
@@ -139,7 +199,9 @@ svg {
   }
 
   .premium-card {
-    @apply rounded-3xl border bg-white/80 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl transition duration-200;
+    @apply border bg-white/80 backdrop-blur-2xl transition duration-200;
+    border-radius: var(--v4-radius-card);
+    box-shadow: var(--v4-shadow-card);
     border-color: rgba(255, 255, 255, 0.72);
   }
 
@@ -148,27 +210,30 @@ svg {
   }
 
   .glass-panel {
-    @apply rounded-3xl border border-white/40 bg-white/70 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl;
+    @apply border border-white/40 bg-white/70 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl;
+    border-radius: var(--v4-radius-card);
   }
 
   .finance-terminal-panel {
-    @apply rounded-3xl text-white;
+    @apply text-white;
+    border-radius: var(--v4-radius-card);
     background:
       linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
       radial-gradient(circle at 12% -8%, rgba(59, 130, 246, 0.28), transparent 27rem),
       radial-gradient(circle at 92% 8%, rgba(16, 185, 129, 0.15), transparent 22rem),
-      linear-gradient(135deg, #040814 0%, #0a1425 56%, #020617 100%);
+      linear-gradient(135deg, #040814 0%, #0a1425 56%, var(--v4-panel-darker) 100%);
     background-size: 34px 34px, 34px 34px, auto, auto, auto;
     border: 1px solid rgba(148, 163, 184, 0.14);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.08),
       inset 0 -1px 0 rgba(15, 23, 42, 0.7),
-      0 34px 96px rgba(2, 6, 23, 0.32);
+      var(--v4-shadow-dark);
   }
 
   .digital-drilldown-panel {
-    @apply rounded-3xl text-white;
+    @apply text-white;
+    border-radius: var(--v4-radius-card);
     background:
       linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
@@ -182,7 +247,8 @@ svg {
   }
 
   .digital-glass {
-    @apply rounded-3xl backdrop-blur-xl;
+    @apply backdrop-blur-xl;
+    border-radius: var(--v4-radius-card);
     background:
       linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.045));
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -199,26 +265,58 @@ svg {
   }
 
   .digital-row {
-    @apply rounded-2xl;
+    border-radius: var(--v4-radius-field);
     background: rgba(255, 255, 255, 0.055);
     border: 1px solid rgba(255, 255, 255, 0.075);
   }
 
   .digital-row-soft {
-    @apply rounded-2xl;
+    border-radius: var(--v4-radius-field);
     background: rgba(255, 255, 255, 0.04);
   }
 
   .app-sidebar {
     background:
       radial-gradient(circle at 20% 0%, rgba(59, 130, 246, 0.16), transparent 18rem),
-      linear-gradient(180deg, #06101e 0%, #07111f 48%, #020617 100%);
+      linear-gradient(180deg, #06101e 0%, #07111f 48%, var(--v4-panel-darker) 100%);
     border-right: 1px solid rgba(148, 163, 184, 0.13);
     box-shadow: 22px 0 70px rgba(15, 23, 42, 0.18);
   }
 
   .tabular-finance {
     @apply tabular-nums tracking-normal;
+  }
+
+  .v4-page-header {
+    @apply surface flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-end lg:justify-between;
+  }
+
+  .v4-page-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+
+  .v4-page-title {
+    @apply mt-2 text-2xl font-semibold tracking-normal text-slate-950 sm:text-3xl;
+  }
+
+  .v4-page-description {
+    @apply mt-2 max-w-3xl text-sm leading-6 text-slate-500;
+  }
+
+  .v4-page-toolbar {
+    @apply surface flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4;
+  }
+
+  .v4-filter-grid {
+    @apply grid min-w-0 flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .v4-chart-card {
+    @apply surface min-w-0 overflow-hidden p-4;
+  }
+
+  .v4-mobile-record-card {
+    @apply premium-card min-w-0 p-3;
   }
 
   .privacy-amount {
@@ -362,5 +460,192 @@ svg {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a,
+  a:visited {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  [data-app-shell-ready] {
+    min-height: auto !important;
+  }
+
+  .lg\:pl-64 {
+    padding-left: 0 !important;
+  }
+
+  .app-sidebar,
+  .app-sidebar *,
+  header,
+  header *,
+  nav,
+  nav *,
+  form,
+  form *,
+  button,
+  summary,
+  [role="dialog"],
+  [aria-modal="true"],
+  .floating-action-button,
+  .icon-button,
+  .primary-action,
+  .secondary-action,
+  .danger-action,
+  .action-menu,
+  [data-radix-popper-content-wrapper],
+  .no-print {
+    display: none !important;
+  }
+
+  .fixed,
+  .sticky {
+    position: static !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .app-content-shell {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .surface,
+  .surface-dark,
+  .premium-card,
+  .glass-panel,
+  .finance-terminal-panel,
+  .digital-drilldown-panel,
+  .digital-glass,
+  .digital-chip,
+  .digital-row,
+  .digital-row-soft {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    max-width: 100% !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    backdrop-filter: none !important;
+  }
+
+  .surface-dark *,
+  .finance-terminal-panel *,
+  .digital-drilldown-panel *,
+  .digital-glass *,
+  .digital-chip *,
+  .digital-row *,
+  .digital-row-soft * {
+    color: inherit !important;
+  }
+
+  .surface,
+  .premium-card,
+  article,
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .scroll-x-stable,
+  .scroll-y-stable {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .md\:hidden {
+    display: none !important;
+  }
+
+  .hidden.md\:block,
+  .md\:block,
+  .cash-ledger-desktop-table {
+    display: block !important;
+  }
+
+  .cash-ledger-mobile-cards {
+    display: none !important;
+  }
+
+  .grid,
+  .flex {
+    gap: 8px !important;
+  }
+
+  table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  th,
+  td {
+    position: static !important;
+    padding: 6px 8px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  canvas,
+  svg,
+  img {
+    max-width: 100% !important;
+    height: auto !important;
   }
 }

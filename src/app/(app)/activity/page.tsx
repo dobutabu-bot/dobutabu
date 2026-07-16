@@ -1,12 +1,15 @@
 import type { AuditAction, AuditEntityType, Prisma } from "@prisma/client";
 import { Filter, History } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { StatusBadge } from "@/components/status-badge";
 import { auditActionLabels, auditEntityLabels } from "@/lib/audit";
 import { requireUser } from "@/lib/auth";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { endOfDateInput, formatDate, parseDateInput } from "@/lib/utils";
 
@@ -16,6 +19,7 @@ type ActivityPageProps = {
     action?: string;
     startDate?: string;
     endDate?: string;
+    page?: string;
   }>;
 };
 
@@ -27,6 +31,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   const params = await searchParams;
   const selectedEntityType = isAuditEntityType(params.entityType) ? params.entityType : undefined;
   const selectedAction = isAuditAction(params.action) ? params.action : undefined;
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const filters = {
     entityType: selectedEntityType ?? "",
     action: selectedAction ?? "",
@@ -49,21 +54,32 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
     ...(selectedAction ? { action: selectedAction } : {}),
     ...(createdAt.gte || createdAt.lte ? { createdAt } : {})
   };
-  const logs = await prisma.auditLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      entityType: true,
-      action: true,
-      message: true,
-      createdAt: true
-    }
-  });
+  const [logs, totalCount] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: pagination.skip,
+      take: pagination.take,
+      select: {
+        id: true,
+        entityType: true,
+        action: true,
+        message: true,
+        createdAt: true
+      }
+    }),
+    prisma.auditLog.count({ where })
+  ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        eyebrow="Yönetim"
+        title="İşlem Geçmişi"
+        description="Düzenleme, silme, arşivleme, iptal ve geri alma kayıtlarını denetleyin."
+      />
+
       <section className="surface p-4">
         <div className="mb-4 flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
@@ -143,6 +159,25 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           ]}
         />
       )}
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) =>
+          createPageHref(
+            "/activity",
+            {
+              entityType: filters.entityType,
+              action: filters.action,
+              startDate: filters.startDate,
+              endDate: filters.endDate
+            },
+            page
+          )
+        }
+      />
     </div>
   );
 }

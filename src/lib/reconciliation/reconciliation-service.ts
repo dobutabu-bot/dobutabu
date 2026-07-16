@@ -84,6 +84,7 @@ export async function getReconciliationData(scope: ReconciliationScope) {
   const systemEntries = await getSystemEntries(scope.userId, bankRows, selectedImport?.cashAccountId ?? undefined);
   const suggestions = buildSuggestions(bankRows, systemEntries);
   const matchedRows = bankRows.filter(isMatchedBankRow);
+  const ignoredRows = bankRows.filter(isIgnoredBankMatch);
   const unmatchedBankRows = bankRows.filter((row) => !isMatchedBankRow(row) && !isIgnoredBankMatch(row));
   const suggestedBankIds = new Set(suggestions.map((suggestion) => suggestion.bankRowId));
   const unmatchedBankWithoutSuggestion = unmatchedBankRows.filter((row) => !suggestedBankIds.has(row.id));
@@ -104,12 +105,13 @@ export async function getReconciliationData(scope: ReconciliationScope) {
       unmatchedBank: unmatchedBankWithoutSuggestion.length,
       unmatchedSystem: unmatchedSystemMovements.length,
       suggestions: suggestions.length,
-      ignored: bankRows.filter((row) => row.matchType === "IGNORED").length
+      ignored: ignoredRows.length
     },
     suggestions: suggestions.slice(0, 50),
     unmatchedBankRows: pagedUnmatchedBankRows.map(serializeBankRow),
     unmatchedSystemMovements: unmatchedSystemMovements.slice(0, 100),
     matchedRows: matchedRows.slice(0, 50).map(serializeBankRow),
+    ignoredRows: ignoredRows.slice(0, 50).map(serializeBankRow),
     manualOptions: {
       bankRows: unmatchedBankRows.slice(0, 200).map(serializeBankRow),
       systemMovements: unmatchedSystemMovements.slice(0, 200)

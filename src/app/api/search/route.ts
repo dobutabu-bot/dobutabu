@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   if (!user) return unauthorized();
 
   const url = new URL(request.url);
-  const query = url.searchParams.get("q") ?? "";
+  const query = (url.searchParams.get("q") ?? "").slice(0, 80);
   const data = await searchAll(user.id, query);
 
   return Response.json(data);

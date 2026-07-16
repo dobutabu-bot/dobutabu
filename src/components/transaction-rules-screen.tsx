@@ -269,7 +269,7 @@ export function TransactionRulesScreen({ initialRules, clients, caseFiles, cashA
               <button
                 key={example.label}
                 type="button"
-                className="secondary-action min-h-10 px-3"
+                className="secondary-action min-h-11 px-3"
                 onClick={() => setForm((current) => ({ ...current, ...example.data }))}
               >
                 <Wand2 className="h-4 w-4" aria-hidden />
@@ -368,7 +368,7 @@ export function TransactionRulesScreen({ initialRules, clients, caseFiles, cashA
           {message ? <p className="mt-3 text-sm text-rose-700">{message}</p> : null}
 
           {editingId ? (
-            <button type="button" className="secondary-action mt-4 min-h-10" onClick={() => { setEditingId(null); setForm(defaultForm()); }}>
+            <button type="button" className="secondary-action mt-4 min-h-11" onClick={() => { setEditingId(null); setForm(defaultForm()); }}>
               <XCircle className="h-4 w-4" aria-hidden />
               Düzenlemeyi bırak
             </button>
@@ -474,15 +474,15 @@ export function TransactionRulesScreen({ initialRules, clients, caseFiles, cashA
                     </div>
                   </div>
                   <div className="flex flex-wrap justify-end gap-2">
-                    <button type="button" className="secondary-action min-h-10" onClick={() => toggleRule(rule)} disabled={loading}>
+                    <button type="button" className="secondary-action min-h-11" onClick={() => toggleRule(rule)} disabled={loading}>
                       <Power className="h-4 w-4" aria-hidden />
                       {rule.isActive ? "Pasifleştir" : "Aktifleştir"}
                     </button>
-                    <button type="button" className="secondary-action min-h-10" onClick={() => startEdit(rule)}>
+                    <button type="button" className="secondary-action min-h-11" onClick={() => startEdit(rule)}>
                       <Pencil className="h-4 w-4" aria-hidden />
                       Düzenle
                     </button>
-                    <button type="button" className="secondary-action min-h-10 border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => setPendingDelete(rule)}>
+                    <button type="button" className="secondary-action min-h-11 border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => setPendingDelete(rule)}>
                       <Trash2 className="h-4 w-4" aria-hidden />
                       Sil
                     </button>

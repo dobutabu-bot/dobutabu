@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 import type { BankAnalysisChartsData } from "@/components/bank-analysis-charts";
 
@@ -10,6 +11,9 @@ const BankAnalysisCharts = dynamic(
 );
 
 export function LazyBankAnalysisCharts({ data }: { data: BankAnalysisChartsData }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <BankAnalysisChartsLoading />;
   return <BankAnalysisCharts data={data} />;
 }
 

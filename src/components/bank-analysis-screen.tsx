@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, FileText, Filter, Landmark, Scale, TrendingDown, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
 import { BankRowActions } from "@/components/bank/bank-row-actions";
@@ -42,15 +42,15 @@ export function BankAnalysisScreen({ data, selectedImportId, page, searchParams 
               <Landmark className="h-4 w-4" aria-hidden />
               Ekstre Yükle
             </Link>
-            <Link href={csvHref} className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
+            <a href={csvHref} className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
               <Download className="h-4 w-4" aria-hidden />
               CSV
-            </Link>
+            </a>
             {pdfHref ? (
-              <Link href={pdfHref} className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
+              <a href={pdfHref} className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
                 <FileText className="h-4 w-4" aria-hidden />
                 PDF
-              </Link>
+              </a>
             ) : null}
           </div>
         </div>

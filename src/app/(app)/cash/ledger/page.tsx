@@ -1,30 +1,35 @@
 import { CalendarClock, Download, Eye, Filter, MoveRight, RotateCcw, Scale, WalletCards } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
+import { RecordActionMenu } from "@/components/action-menu";
 import { AppleLikeButton } from "@/components/apple-like-button";
 import { CashMovementRow } from "@/components/cash-movement-row";
 import { DataTable } from "@/components/data-table";
 import { EntityForm, type EntityFormField } from "@/components/entity-form";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { appendCashLedgerFilters, cashLedgerFiltersFromRecord, type CashLedgerFilters } from "@/lib/cash/cash-ledger-query";
-import { getLedgerEntries, type SerializableLedgerEntry } from "@/lib/cash/cash-ledger-service";
+import { countLedgerEntries, getLedgerEntries, type SerializableLedgerEntry } from "@/lib/cash/cash-ledger-service";
 import { cashLedgerDirectionLabels, cashLedgerEntryTypeLabels, reminderPriorityLabels, toOptions } from "@/lib/labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { addDays, dateInputValue, formatDate, startOfDay, toNumber } from "@/lib/utils";
 
 type CashLedgerPageProps = {
-  searchParams: Promise<Partial<Record<keyof CashLedgerFilters, string>>>;
+  searchParams: Promise<Partial<Record<keyof CashLedgerFilters, string>> & { page?: string }>;
 };
 
 export default async function CashLedgerPage({ searchParams }: CashLedgerPageProps) {
   const user = await requireUser();
   const params = await searchParams;
   const filters = cashLedgerFiltersFromRecord(params);
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const today = startOfDay(new Date());
-  const [cashAccounts, clients, cases, entries, upcomingExpenseReminders] = await Promise.all([
+  const [cashAccounts, clients, cases, entries, totalCount, upcomingExpenseReminders] = await Promise.all([
     prisma.cashAccount.findMany({
       where: { userId: user.id, deletedAt: null },
       orderBy: [{ isDefault: "desc" }, { isActive: "desc" }, { name: "asc" }]
@@ -38,7 +43,8 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
       orderBy: { createdAt: "desc" },
       include: { client: true }
     }),
-    getLedgerEntries({ userId: user.id, ...filters, take: 300 }),
+    getLedgerEntries({ userId: user.id, ...filters, skip: pagination.skip, take: pagination.take }),
+    countLedgerEntries({ userId: user.id, ...filters }),
     prisma.taskReminder.findMany({
       where: {
         userId: user.id,
@@ -60,6 +66,7 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
       }
     })
   ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
   const activeCashAccounts = cashAccounts.filter((account) => account.isActive);
   const accountFilterOptions = [
     { label: "Tüm kasa hesapları", value: "" },
@@ -97,15 +104,12 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">V2 Dijital Kasa</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-950">Kasa Hareketleri</h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
-            Tahsilat, gider, transfer ve manuel düzeltme hareketlerini kasa bazında izleyin.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PageHeader
+        eyebrow="V2 Dijital Kasa"
+        title="Kasa Hareketleri"
+        description="Tahsilat, gider, transfer ve manuel düzeltme hareketlerini kasa bazında izleyin."
+        actions={
+          <>
           <AppleLikeButton href="/cash/accounts" icon={WalletCards} tone="light">
             Hesaplar
           </AppleLikeButton>
@@ -115,8 +119,9 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
           <AppleLikeButton href="/cash/reconciliation" icon={Scale} tone="light">
             Bakiye kontrolü
           </AppleLikeButton>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <section className="surface-dark p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -277,14 +282,14 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
             </select>
           </label>
           <div className="flex flex-col items-stretch gap-2 md:col-span-2 xl:col-span-2 xl:flex-row xl:items-end">
-            <Link href={`/api/export?${exportParams.toString()}`} className="secondary-action h-10 w-full justify-center xl:w-auto">
+            <a href={`/api/export?${exportParams.toString()}`} className="secondary-action h-10 w-full justify-center xl:w-auto">
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
-            </Link>
-            <Link href={`/api/reports/cash/pdf?${pdfParams.toString()}`} className="secondary-action h-10 w-full justify-center xl:w-auto">
+            </a>
+            <a href={`/api/reports/cash/pdf?${pdfParams.toString()}`} className="secondary-action h-10 w-full justify-center xl:w-auto">
               <Download className="h-4 w-4" aria-hidden />
               PDF indir
-            </Link>
+            </a>
           </div>
         </form>
       </section>
@@ -314,15 +319,42 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
             {
               header: "İşlem",
               cell: (row) => (
-                <Link href={`/cash/ledger/${row.id}`} className="secondary-action min-h-10 px-3">
-                  <Eye className="h-4 w-4" aria-hidden />
-                  Detay
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/cash/ledger/${row.id}`} className="secondary-action min-h-11 px-3">
+                    <Eye className="h-4 w-4" aria-hidden />
+                    Detay
+                  </Link>
+                  <Link href={`/documents/new?linkedCashLedgerEntryId=${row.id}`} className="secondary-action min-h-11 px-3">
+                    Belge bağla
+                  </Link>
+                </div>
               )
             }
           ]}
         />
       </div>
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) =>
+          createPageHref(
+            "/cash/ledger",
+            {
+              startDate: filters.startDate,
+              endDate: filters.endDate,
+              cashAccountId: filters.cashAccountId,
+              clientId: filters.clientId,
+              caseFileId: filters.caseFileId,
+              entryType: filters.entryType,
+              direction: filters.direction
+            },
+            page
+          )
+        }
+      />
     </div>
   );
 }
@@ -424,21 +456,29 @@ function CashLedgerMobileCards({ entries }: { entries: SerializableLedgerEntry[]
   return (
     <section className="cash-ledger-mobile-cards space-y-3">
       {entries.map((entry) => (
-        <Link key={entry.id} href={`/cash/ledger/${entry.id}`} className="block">
-          <CashMovementRow
-            title={entry.description || cashLedgerEntryTypeLabels[entry.entryType]}
-            date={entry.date}
-            amount={entry.amount}
-            currency={entry.currency}
-            direction={entry.direction}
-            entryType={entry.entryType}
-            accountName={entry.cashAccountName}
-            entryTypeLabel={cashLedgerEntryTypeLabels[entry.entryType]}
-            directionLabel={cashLedgerDirectionLabels[entry.direction]}
-            clientName={entry.clientName}
-            caseFileTitle={entry.caseFileTitle}
-          />
-        </Link>
+        <article key={entry.id} className="relative min-w-0">
+          <Link href={`/cash/ledger/${entry.id}`} className="block pr-12">
+            <CashMovementRow
+              title={entry.description || cashLedgerEntryTypeLabels[entry.entryType]}
+              date={entry.date}
+              amount={entry.amount}
+              currency={entry.currency}
+              direction={entry.direction}
+              entryType={entry.entryType}
+              accountName={entry.cashAccountName}
+              entryTypeLabel={cashLedgerEntryTypeLabels[entry.entryType]}
+              directionLabel={cashLedgerDirectionLabels[entry.direction]}
+              clientName={entry.clientName}
+              caseFileTitle={entry.caseFileTitle}
+            />
+          </Link>
+          <div className="absolute right-2 top-2">
+            <RecordActionMenu label={`${entry.description || cashLedgerEntryTypeLabels[entry.entryType]} işlemleri`}>
+              <Link href={`/cash/ledger/${entry.id}`} className="secondary-action">Detay</Link>
+              <Link href={`/documents/new?linkedCashLedgerEntryId=${entry.id}`} className="secondary-action">Belge bağla</Link>
+            </RecordActionMenu>
+          </div>
+        </article>
       ))}
     </section>
   );

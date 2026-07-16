@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAppOrigin, validateProductionEnvironment } from "@/lib/production-env";
+import { isAllowedRequestOrigin } from "@/lib/request-origin";
 import { SESSION_COOKIE } from "@/lib/session";
 
 const PUBLIC_PATHS = [
@@ -66,10 +67,11 @@ export function middleware(request: NextRequest) {
 
 function isSameOriginRequest(request: NextRequest) {
   const origin = request.headers.get("origin");
-  const appOrigin = getAppOrigin();
-
-  if (origin && origin !== request.nextUrl.origin && origin !== appOrigin) {
-    return false;
+  if (origin) {
+    const requestOrigins = getRequestOrigins(request);
+    if (!isAllowedRequestOrigin({ origin, ...requestOrigins })) {
+      return false;
+    }
   }
 
   const fetchSite = request.headers.get("sec-fetch-site");
@@ -78,6 +80,25 @@ function isSameOriginRequest(request: NextRequest) {
   }
 
   return true;
+}
+
+function getRequestOrigins(request: NextRequest) {
+  const appOrigin = getAppOrigin();
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || request.headers.get("host")?.trim();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = forwardedProto || request.nextUrl.protocol.replace(":", "");
+  let forwardedOrigin: string | null = null;
+
+  if (host) {
+    try {
+      forwardedOrigin = new URL(`${protocol}://${host}`).origin;
+    } catch {
+      // An invalid Host header must never widen the origin allowlist.
+    }
+  }
+
+  return { requestOrigin: request.nextUrl.origin, appOrigin, forwardedOrigin };
 }
 
 function withSecurityHeaders<TResponse extends Response>(response: TResponse) {

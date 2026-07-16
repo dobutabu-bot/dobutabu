@@ -1,6 +1,6 @@
 import { Download, FileText } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { PdfJsViewer } from "@/components/documents/pdf-js-viewer";
 import { PrivacyDocumentFrame } from "@/components/privacy/privacy-mask";

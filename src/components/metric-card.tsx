@@ -27,11 +27,11 @@ const valueTones = {
 
 export function MetricCard({ title, value, detail, icon: Icon, tone = "neutral" }: MetricCardProps) {
   return (
-    <div className="premium-card premium-card-hover p-4">
+    <div className="premium-card premium-card-hover flex h-full min-w-0 flex-col p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="label">{title}</p>
-          <PrivacyAmount as="p" className={cn("mt-2 truncate text-2xl font-semibold tabular-nums sm:text-3xl", valueTones[tone])}>
+          <PrivacyAmount as="p" className={cn("metric-value mt-2", valueTones[tone])} title={value}>
             {value}
           </PrivacyAmount>
         </div>
@@ -39,7 +39,7 @@ export function MetricCard({ title, value, detail, icon: Icon, tone = "neutral" 
           <Icon className="h-5 w-5" aria-hidden />
         </span>
       </div>
-      {detail ? <p className="mt-3 truncate text-xs text-slate-500">{detail}</p> : null}
+      {detail ? <p className="mt-auto truncate pt-3 text-xs text-slate-500" title={detail}>{detail}</p> : null}
     </div>
   );
 }

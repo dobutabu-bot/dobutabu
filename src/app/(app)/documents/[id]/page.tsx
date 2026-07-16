@@ -1,12 +1,15 @@
-import { ArrowLeft, Download, ExternalLink, Pencil, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { Download, ExternalLink, FileText, HardDrive, Pencil, ShieldCheck } from "lucide-react";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
+import { DetailActivityLog } from "@/components/detail-activity-log";
+import { DetailBreadcrumb, DetailHero, DetailSection, DetailTabs } from "@/components/detail-shell";
 import { DocumentProcessingLog } from "@/components/documents/document-processing-log";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { DocumentOcrButton } from "@/components/document-ocr-button";
 import { DocumentReprocessButton } from "@/components/document-reprocess-button";
+import { MetricCard } from "@/components/metric-card";
 import { PrivacyAmount, PrivacyDocumentFrame } from "@/components/privacy/privacy-mask";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -47,22 +50,31 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/documents" className="secondary-action">
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Belgelere Dön
-        </Link>
-        <div className="flex flex-wrap gap-2">
+      <DetailBreadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Belgeler", href: "/documents" }, { label: document.title }]} />
+      <DetailHero
+        eyebrow="Belge Detayı"
+        title={document.title}
+        description={document.description || "Açıklama girilmemiş."}
+        status={
+          <>
+            <StatusBadge>{documentTypeLabels[document.documentType]}</StatusBadge>
+            <StatusBadge tone={document.extractionStatus === "FAILED" ? "rose" : "neutral"}>
+              {documentExtractionStatusLabels[document.extractionStatus]}
+            </StatusBadge>
+          </>
+        }
+        actions={
+          <>
           <Link href={`/documents/${document.id}/edit`} className="secondary-action">
             <Pencil className="h-4 w-4" aria-hidden />
             Düzenle
           </Link>
           <DocumentReprocessButton documentId={document.id} />
           {isOcrActionVisible(document.mimeType) ? <DocumentOcrButton documentId={document.id} /> : null}
-          <Link href={`/api/documents/${document.id}/download`} className="primary-action">
+          <a href={`/api/documents/${document.id}/download`} className="primary-action">
             <Download className="h-4 w-4" aria-hidden />
             İndir
-          </Link>
+          </a>
           <ConfirmActionButton
             endpoint={`/api/documents/${document.id}`}
             label="Sil"
@@ -71,27 +83,20 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             successMessage="Belge silindi."
             redirectTo="/documents"
           />
-        </div>
-      </div>
+          </>
+        }
+      />
+      <DetailTabs />
 
-      <section className="surface-dark p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Belge Detayı</p>
-            <h1 className="mt-2 break-words text-2xl font-semibold text-white">{document.title}</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{document.description || "Açıklama girilmemiş."}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge>{documentTypeLabels[document.documentType]}</StatusBadge>
-            <StatusBadge tone={document.extractionStatus === "FAILED" ? "rose" : "neutral"}>
-              {documentExtractionStatusLabels[document.extractionStatus]}
-            </StatusBadge>
-          </div>
-        </div>
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" id="overview">
+        <MetricCard title="Belge Türü" value={documentTypeLabels[document.documentType]} icon={FileText} />
+        <MetricCard title="Dosya Boyutu" value={formatFileSize(document.fileSize)} icon={HardDrive} />
+        <MetricCard title="Belge Tarihi" value={formatDate(document.documentDate)} icon={FileText} />
+        <MetricCard title="Tutar" value={document.amount ? formatMoney(document.amount, document.currency) : "-"} icon={FileText} />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-        <div className="surface overflow-hidden">
+        <div className="surface scroll-mt-24 overflow-hidden" id="finance">
           <div className="border-b border-slate-100 bg-white/70 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-950">Güvenli Önizleme</h2>
           </div>
@@ -105,7 +110,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
         </div>
 
         <div className="space-y-5">
-          <section className="surface p-4">
+          <DetailSection title="Belge Bilgileri">
             <h2 className="text-sm font-semibold text-slate-950">Belge Bilgileri</h2>
             <dl className="mt-3 grid gap-2 text-sm">
               <InfoRow label="Dosya adı" value={document.originalFileName} />
@@ -130,10 +135,9 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
                 )}
               </div>
             </div>
-          </section>
+          </DetailSection>
 
-          <section className="surface p-4">
-            <h2 className="text-sm font-semibold text-slate-950">Bağlantılar</h2>
+          <DetailSection id="documents" title="Bağlantılar" description="Belgenin ilişkilendirildiği kayıtlar.">
             <div className="mt-3 grid gap-2">
               {document.linkedClient ? <LinkedRow href={`/clients/${document.linkedClient.id}`} label={`Müvekkil: ${document.linkedClient.name}`} /> : null}
               {document.linkedCaseFile ? <LinkedRow href={`/cases/${document.linkedCaseFile.id}`} label={`Dosya: ${document.linkedCaseFile.title}`} /> : null}
@@ -143,7 +147,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
               {document.linkedCashLedgerEntry ? <LinkedRow href={`/cash/ledger/${document.linkedCashLedgerEntry.id}`} label={`Kasa hareketi: ${formatMoney(document.linkedCashLedgerEntry.amount, document.linkedCashLedgerEntry.currency)}`} sensitive /> : null}
               {!hasAnyLink(document) ? <p className="text-sm text-slate-500">Bu belge henüz bir kayıtla ilişkilendirilmemiş.</p> : null}
             </div>
-          </section>
+          </DetailSection>
 
           <DocumentProcessingLog logs={document.processingLogs} />
 
@@ -168,6 +172,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
           </div>
         </section>
       ) : null}
+      <DetailActivityLog userId={user.id} entityType="DOCUMENT" entityId={document.id} />
     </div>
   );
 }

@@ -57,6 +57,7 @@ export type LedgerEntryFilters = {
   entryType?: CashLedgerEntryType | "";
   direction?: CashLedgerDirection | "";
   take?: number;
+  skip?: number;
 };
 
 export type ManualAdjustmentInput = {
@@ -376,10 +377,17 @@ export async function getLedgerEntries(filters: LedgerEntryFilters): Promise<Ser
     where: cashLedgerWhere(filters),
     select: ledgerEntrySelect,
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    skip: filters.skip,
     take: Math.min(filters.take ?? 50, 500)
   });
 
   return entries.map(serializeLedgerEntry);
+}
+
+export async function countLedgerEntries(filters: LedgerEntryFilters): Promise<number> {
+  return prisma.cashLedgerEntry.count({
+    where: cashLedgerWhere(filters)
+  });
 }
 
 export async function getRunningBalance(

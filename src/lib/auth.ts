@@ -89,7 +89,7 @@ export function sessionCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" && process.env.APP_URL?.startsWith("https://") !== false,
     path: "/",
     maxAge: SESSION_MAX_AGE
   };

@@ -6,10 +6,11 @@ type PrivacyAmountProps = {
   children: ReactNode;
   className?: string;
   as?: ElementType;
+  title?: string;
 };
 
-export function PrivacyAmount({ children, className, as: Component = "span" }: PrivacyAmountProps) {
-  return <Component className={cn("privacy-amount", className)}>{children}</Component>;
+export function PrivacyAmount({ children, className, as: Component = "span", title }: PrivacyAmountProps) {
+  return <Component className={cn("privacy-amount", className)} title={title}>{children}</Component>;
 }
 
 export function PrivacyDocumentFrame({ children }: { children: ReactNode }) {

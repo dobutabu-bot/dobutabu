@@ -1,13 +1,14 @@
 "use client";
 
-import { CloudUpload, FileCheck2, Loader2, ShieldCheck } from "lucide-react";
+import { CloudUpload, FileCheck2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { showToast } from "@/components/toast";
 import { emitAppDataMutation } from "@/lib/client-sync";
 import { documentTypeOptions } from "@/lib/document-labels";
 import { cn } from "@/lib/utils";
+import { CurrencyInput, DateInput, FormField, FormSection, Label, Select, SubmitBar, Textarea } from "@/components/premium-form";
 
 type SelectOption = {
   label: string;
@@ -52,6 +53,12 @@ export function DocumentUploadForm({
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [documentDescription, setDocumentDescription] = useState("");
+  const [linkedClientId, setLinkedClientId] = useState(defaults?.linkedClientId ?? "");
+  const clientSuggestion = useMemo(
+    () => suggestDocumentClient(`${selectedFile?.name ?? ""} ${documentDescription}`, clients, linkedClientId),
+    [clients, documentDescription, linkedClientId, selectedFile?.name]
+  );
 
   async function submitUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +76,9 @@ export function DocumentUploadForm({
     }
 
     formData.set("file", selectedFile);
+    if (!String(formData.get("title") ?? "").trim()) {
+      formData.set("title", selectedFile.name.replace(/\.[^.]+$/, "").trim() || "Yüklenen belge");
+    }
     setLoading(true);
     setMessage(null);
 
@@ -134,7 +144,7 @@ export function DocumentUploadForm({
         </div>
       </section>
 
-      <section className="surface p-4">
+      <FormSection>
         <label
           className={cn(
             "flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed p-6 text-center transition",
@@ -173,90 +183,73 @@ export function DocumentUploadForm({
             Telefondan / Bilgisayardan Seç
           </button>
         </label>
-      </section>
+      </FormSection>
 
-      <section className="surface p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <label className="space-y-1">
-            <span className="label">Belge Başlığı</span>
-            <input className="field" name="title" placeholder="Örn. Temmuz banka dekontu" />
-          </label>
-          <label className="space-y-1">
-            <span className="label">Dosya Türü</span>
-            <select className="field" name="documentType" defaultValue="BANK_RECEIPT">
-              {documentTypeOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1">
-            <span className="label">Belge Tarihi</span>
-            <input className="field" type="date" name="documentDate" />
-          </label>
-          <label className="space-y-1">
-            <span className="label">Tutar</span>
-            <input className="field" type="number" name="amount" min="0" step="0.01" placeholder="0,00" />
-          </label>
-          <label className="space-y-1">
-            <span className="label">Para Birimi</span>
-            <input className="field" name="currency" defaultValue="TRY" />
-          </label>
-          <label className="space-y-1">
-            <span className="label">Etiketler</span>
-            <input className="field" name="tags" placeholder="dekont, temmuz, banka" />
-          </label>
-          <label className="space-y-1 md:col-span-2 xl:col-span-3">
-            <span className="label">Açıklama</span>
-            <textarea className="field min-h-24 resize-none" name="description" placeholder="Belgeyle ilgili kısa not" />
-          </label>
+      <FormSection>
+        <div className="grid gap-3">
+          <input type="hidden" name="title" value="" />
+          <FormField>
+            <Label htmlFor="document-type" required>
+              Belge Türü
+            </Label>
+            <Select id="document-type" name="documentType" defaultValue="BANK_RECEIPT" options={documentTypeOptions()} />
+          </FormField>
         </div>
-      </section>
+      </FormSection>
 
-      <section className="surface p-4">
-        <div className="mb-3">
-          <h2 className="text-sm font-semibold text-slate-950">Opsiyonel Bağlantılar</h2>
-          <p className="mt-1 text-sm text-slate-500">Belgeyi ilgili müvekkil, dosya veya finans kaydına bağlayabilirsiniz.</p>
+      {clientSuggestion ? (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+          <div className="min-w-0">
+            <p className="font-semibold">Akıllı öneri: {clientSuggestion.label}</p>
+            <p className="mt-0.5 text-xs text-blue-700">Belge adı veya açıklamasındaki müvekkil ifadesine göre önerildi. Yükleme, yalnız sizin onayınızla yapılır.</p>
+          </div>
+          <button
+            type="button"
+            className="min-h-11 rounded-xl border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-800 transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20"
+            onClick={() => setLinkedClientId(clientSuggestion.value)}
+          >
+            Müvekkili Uygula
+          </button>
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <DocumentSelect name="linkedClientId" label="Müvekkil" options={clients} emptyLabel="Müvekkil yok" defaultValue={defaults?.linkedClientId} />
-          <DocumentSelect name="linkedCaseFileId" label="Dosya" options={caseFiles} emptyLabel="Dosya yok" defaultValue={defaults?.linkedCaseFileId} />
-          <DocumentSelect name="linkedIncomeId" label="Tahsilat" options={incomes} emptyLabel="Tahsilat yok" defaultValue={defaults?.linkedIncomeId} />
-          <DocumentSelect name="linkedExpenseId" label="Gider" options={expenses} emptyLabel="Gider yok" defaultValue={defaults?.linkedExpenseId} />
-          <DocumentSelect
-            name="linkedInvoiceOrReceiptId"
-            label="Makbuz/Fatura"
-            options={invoiceOrReceipts}
-            emptyLabel="Belge yok"
-            defaultValue={defaults?.linkedInvoiceOrReceiptId}
-          />
-          <DocumentSelect
-            name="linkedCashLedgerEntryId"
-            label="Kasa Hareketi"
-            options={cashLedgerEntries}
-            emptyLabel="Kasa hareketi yok"
-            defaultValue={defaults?.linkedCashLedgerEntryId}
-          />
-        </div>
-      </section>
-
-      {message ? (
-        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800" role="alert">
-          {message}
-        </p>
       ) : null}
 
-      <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-10 lg:static">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-3xl bg-slate-950 px-6 text-base font-semibold text-white shadow-[0_20px_48px_rgba(15,23,42,0.24)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto"
-        >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <CloudUpload className="h-5 w-5" aria-hidden />}
-          {loading ? "Yükleniyor" : "Belgeyi Güvenli Yükle"}
-        </button>
-      </div>
+      <details className="rounded-3xl border border-slate-200 bg-white/80 open:bg-white">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-5 text-sm font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/15">
+          <span>Gelişmiş Seçenekler</span><span className="text-xs font-medium text-slate-500">Metadata ve bağlantılar</span>
+        </summary>
+        <div className="space-y-4 border-t border-slate-200 p-5">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <FormField><Label htmlFor="document-date">Belge Tarihi</Label><DateInput id="document-date" name="documentDate" /></FormField>
+            <FormField><Label htmlFor="document-amount">Tutar</Label><CurrencyInput id="document-amount" name="amount" currency="TRY" /></FormField>
+            <FormField><Label htmlFor="document-currency">Para Birimi</Label><input id="document-currency" className="field" name="currency" defaultValue="TRY" /></FormField>
+            <FormField><Label htmlFor="document-tags">Etiketler</Label><input id="document-tags" className="field" name="tags" placeholder="dekont, temmuz, banka" /></FormField>
+            <FormField className="md:col-span-2 xl:col-span-3"><Label htmlFor="document-description">Açıklama</Label><Textarea id="document-description" name="description" placeholder="Belgeyle ilgili kısa not" value={documentDescription} onChange={(event) => setDocumentDescription(event.target.value)} /></FormField>
+          </div>
+          <p className="text-sm font-semibold text-slate-800">Opsiyonel bağlantılar</p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <DocumentSelect name="linkedClientId" label="Müvekkil" options={clients} emptyLabel="Müvekkil yok" value={linkedClientId} onChange={setLinkedClientId} />
+            <DocumentSelect name="linkedCaseFileId" label="Dosya" options={caseFiles} emptyLabel="Dosya yok" defaultValue={defaults?.linkedCaseFileId} />
+            <DocumentSelect name="linkedIncomeId" label="Tahsilat" options={incomes} emptyLabel="Tahsilat yok" defaultValue={defaults?.linkedIncomeId} />
+            <DocumentSelect name="linkedExpenseId" label="Gider" options={expenses} emptyLabel="Gider yok" defaultValue={defaults?.linkedExpenseId} />
+            <DocumentSelect
+              name="linkedInvoiceOrReceiptId"
+              label="Makbuz/Fatura"
+              options={invoiceOrReceipts}
+              emptyLabel="Belge yok"
+              defaultValue={defaults?.linkedInvoiceOrReceiptId}
+            />
+            <DocumentSelect
+              name="linkedCashLedgerEntryId"
+              label="Kasa Hareketi"
+              options={cashLedgerEntries}
+              emptyLabel="Kasa hareketi yok"
+              defaultValue={defaults?.linkedCashLedgerEntryId}
+            />
+          </div>
+        </div>
+      </details>
+
+      <SubmitBar submitting={loading} submitLabel="Belgeyi Güvenli Yükle" submittingLabel="Yükleniyor" error={message} />
     </form>
   );
 }
@@ -266,30 +259,67 @@ function DocumentSelect({
   label,
   options,
   emptyLabel,
-  defaultValue = ""
+  defaultValue = "",
+  value,
+  onChange
 }: {
   name: string;
   label: string;
   options: SelectOption[];
   emptyLabel: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
+  const selectedValue = value ?? defaultValue;
   const selectOptions =
-    defaultValue && !options.some((option) => option.value === defaultValue)
-      ? [{ label: "Seçili kayıt", value: defaultValue }, ...options]
+    selectedValue && !options.some((option) => option.value === selectedValue)
+      ? [{ label: "Seçili kayıt", value: selectedValue }, ...options]
       : options;
 
   return (
-    <label className="space-y-1">
-      <span className="label">{label}</span>
-      <select className="field" name={name} defaultValue={defaultValue}>
-        <option value="">{emptyLabel}</option>
-        {selectOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FormField>
+      <Label htmlFor={name}>{label}</Label>
+      <Select
+        id={name}
+        name={name}
+        defaultValue={value === undefined ? defaultValue : undefined}
+        value={value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+        options={[{ label: emptyLabel, value: "" }, ...selectOptions]}
+      />
+    </FormField>
   );
+}
+
+const ignoredClientTokens = new Set(["test", "musteri", "muvekkil", "sirket", "sirketi", "anonim", "limited", "ltd"]);
+
+function suggestDocumentClient(text: string, clients: SelectOption[], selectedClientId: string) {
+  const normalizedText = normalizeDocumentSuggestion(text);
+  if (!normalizedText) return null;
+
+  return clients.find((client) => {
+    if (!client.value || client.value === selectedClientId) return false;
+    const normalizedLabel = normalizeDocumentSuggestion(client.label);
+    if (normalizedLabel.length >= 4 && normalizedText.includes(normalizedLabel)) return true;
+    return normalizedLabel
+      .split(" ")
+      .filter((token) => token.length >= 4 && !ignoredClientTokens.has(token))
+      .some((token) => normalizedText.includes(token));
+  }) ?? null;
+}
+
+function normalizeDocumentSuggestion(value: string) {
+  return value
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }

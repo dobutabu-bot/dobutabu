@@ -2,6 +2,7 @@
 
 import { Loader2, Trash2, X, type LucideIcon } from "lucide-react";
 import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
@@ -54,7 +55,7 @@ export function ConfirmDialog({
     return null;
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-3 sm:items-center"
       role="dialog"
@@ -120,6 +121,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

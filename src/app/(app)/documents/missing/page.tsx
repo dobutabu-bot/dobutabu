@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, FileQuestion, FileText, HandCoins, ReceiptText, WalletCards } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";

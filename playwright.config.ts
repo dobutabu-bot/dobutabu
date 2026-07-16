@@ -4,6 +4,9 @@ import { existsSync } from "fs";
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3006";
+const parsedBaseURL = new URL(baseURL);
+const serverHostname = parsedBaseURL.hostname;
+const serverPort = parsedBaseURL.port || (parsedBaseURL.protocol === "https:" ? "443" : "80");
 const hasProductionBuild = existsSync(".next/BUILD_ID");
 const useProductionServer =
   process.env.PLAYWRIGHT_USE_PROD_SERVER === "1" ||
@@ -35,7 +38,9 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
     ? undefined
     : {
-        command: useProductionServer ? "npm run start -- -H localhost -p 3006" : "npm run dev -- -H localhost -p 3006",
+        command: useProductionServer
+          ? `npm run start -- -H ${serverHostname} -p ${serverPort}`
+          : `npm run dev -- -H ${serverHostname} -p ${serverPort}`,
         url: serverUrl,
         env: {
           ...process.env,
@@ -45,7 +50,10 @@ export default defineConfig({
           AUTH_SECRET: testAuthSecret,
           SESSION_SECRET: testAuthSecret
         },
-        reuseExistingServer: true,
+        // A stale Next.js process can serve an older build while the tests read
+        // current source expectations. Reuse is opt-in so release runs fail fast
+        // instead of producing misleading UI results.
+        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1",
         timeout: 180_000
       },
   projects: [

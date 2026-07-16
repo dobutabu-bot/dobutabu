@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, BriefcaseBusiness, FileText, ReceiptText, Scale } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { DocumentLinksSection } from "@/components/document-links-section";

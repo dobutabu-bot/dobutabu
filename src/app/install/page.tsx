@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Apple, Chrome, Compass, MonitorSmartphone, ShieldCheck, Smartphone } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { knownLimitations } from "@/lib/system-status";

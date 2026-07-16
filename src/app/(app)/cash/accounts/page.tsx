@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { Archive, Banknote, CircleDollarSign, Scale, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 
 import { AppleLikeButton } from "@/components/apple-like-button";
+import { RecordActionMenu } from "@/components/action-menu";
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { CashMetricCard } from "@/components/cash-metric-card";
 import { EntityForm, type EntityFormField } from "@/components/entity-form";
@@ -192,7 +193,7 @@ export default async function CashAccountsPage() {
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-slate-500">{movementCount} aktif hareket</p>
-                  <div className="flex flex-wrap gap-2">
+                  <RecordActionMenu label={`${account.name} kasa hesabı işlemleri`}>
                     <RecordEditButton
                       title="Kasa Hesabı Düzenle"
                       endpoint={`/api/cash/accounts/${account.id}`}
@@ -225,7 +226,7 @@ export default async function CashAccountsPage() {
                         successMessage={movementCount > 0 ? "Kasa hesabı arşivlendi." : "Kasa hesabı silindi."}
                       />
                     ) : null}
-                  </div>
+                  </RecordActionMenu>
                 </div>
               </PremiumCard>
             );

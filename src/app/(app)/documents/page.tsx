@@ -1,13 +1,16 @@
 import type { DocumentType, Prisma } from "@prisma/client";
 import { Download, Eye, FileQuestion, Filter, Grid2X2, Pencil, RotateCcw, ShieldCheck, Table2, Unlink, Upload } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
+import { RecordActionMenu } from "@/components/action-menu";
 import { DataTable } from "@/components/data-table";
+import { Pagination } from "@/components/pagination";
 import { PrivacyAmount } from "@/components/privacy/privacy-mask";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { documentExtractionStatusLabels, documentTypeLabels } from "@/lib/document-labels";
+import { createPageHref, parsePagination, totalPages } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { cn, endOfDateInput, formatDate, formatMoney, parseDateInput, toNumber } from "@/lib/utils";
 
@@ -23,6 +26,7 @@ type DocumentsPageProps = {
     fileType?: string;
     tag?: string;
     view?: string;
+    page?: string;
   }>;
 };
 
@@ -56,6 +60,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   const fileType = isFileType(params.fileType) ? params.fileType : "";
   const tag = params.tag?.trim() ?? "";
   const view = params.view === "table" ? "table" : "cards";
+  const pagination = parsePagination({ page: params.page }, { pageSize: 25 });
   const andFilters: Prisma.DocumentWhereInput[] = [];
 
   if (startDate || endDate) {
@@ -96,10 +101,12 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
       : {})
   };
 
-  const [documents, clients, caseFiles, tags] = await Promise.all([
+  const [documents, totalCount, clients, caseFiles, tags] = await Promise.all([
     prisma.document.findMany({
       where,
       orderBy: { uploadedAt: "desc" },
+      skip: pagination.skip,
+      take: pagination.take,
       include: {
         linkedClient: { select: { name: true } },
         linkedCaseFile: { select: { title: true, fileNumber: true } },
@@ -110,6 +117,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
         tags: { include: { tag: true } }
       }
     }),
+    prisma.document.count({ where }),
     prisma.client.findMany({
       where: { userId: user.id, deletedAt: null },
       orderBy: { name: "asc" },
@@ -127,6 +135,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
       select: { name: true }
     })
   ]);
+  const pageCount = totalPages(totalCount, pagination.pageSize);
   const filterValues = { q: query, documentType, clientId, caseFileId, startDate, endDate, linkedType, fileType, tag, view };
 
   return (
@@ -136,7 +145,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">V3 Belge Merkezi</p>
           <h1 className="mt-2 text-2xl font-semibold text-white">Belgeler</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-            Dekont, makbuz, fiş, fatura, PDF, görsel ve banka ekstrelerini güvenli private storage alanında takip edin.
+            Dekont, makbuz, fiş, fatura, PDF, görsel ve banka ekstrelerini güvenli private storage alanında takip edin. {totalCount} sonuç bulundu.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -287,6 +296,14 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
           )}
         </section>
       )}
+
+      <Pagination
+        page={Math.min(pagination.page, pageCount)}
+        totalPages={pageCount}
+        totalItems={totalCount}
+        pageSize={pagination.pageSize}
+        hrefForPage={(page) => createPageHref("/documents", filterValues, page)}
+      />
     </div>
   );
 }
@@ -386,7 +403,7 @@ function DocumentsTable({ documents }: { documents: DocumentListItem[] }) {
       empty="Henüz belge yüklenmedi."
       columns={[
         {
-          header: "Belge",
+          header: "Başlık",
           cell: (document) => (
             <Link href={`/documents/${document.id}`} className="font-semibold text-slate-950 hover:underline">
               {document.title}
@@ -398,12 +415,8 @@ function DocumentsTable({ documents }: { documents: DocumentListItem[] }) {
           cell: (document) => <StatusBadge>{documentTypeLabels[document.documentType]}</StatusBadge>
         },
         {
-          header: "Müvekkil / Dosya",
-          cell: (document) => clientCaseLabel(document)
-        },
-        {
           header: "Bağlantı",
-          cell: (document) => linkedRecordLabel(document)
+          cell: (document) => [clientCaseLabel(document), linkedRecordLabel(document)].filter(Boolean).join(" · ")
         },
         {
           header: "Tarih / Tutar",
@@ -415,21 +428,6 @@ function DocumentsTable({ documents }: { documents: DocumentListItem[] }) {
               </PrivacyAmount>
             </div>
           )
-        },
-        {
-          header: "Dosya",
-          cell: (document) => (
-            <div className="space-y-1">
-              <p className="max-w-[18rem] truncate">{document.originalFileName}</p>
-              <p className="text-xs text-slate-500">
-                {fileTypeLabel(document.mimeType, document.originalFileName)} · {formatFileSize(document.fileSize)}
-              </p>
-            </div>
-          )
-        },
-        {
-          header: "Etiketler",
-          cell: (document) => <TagList tags={document.tags.map((item) => item.tag.name)} />
         },
         {
           header: "Durum",
@@ -482,7 +480,11 @@ function DocumentCard({ document }: { document: DocumentListItem }) {
             {documentExtractionStatusLabels[document.extractionStatus]}
           </StatusBadge>
         </div>
-        <DocumentActions documentId={document.id} />
+        <div className="flex justify-end">
+          <RecordActionMenu label={`${document.title} belge işlemleri`}>
+            <DocumentActions documentId={document.id} />
+          </RecordActionMenu>
+        </div>
       </div>
     </article>
   );
@@ -499,10 +501,10 @@ function DocumentActions({ documentId }: { documentId: string }) {
         <Pencil className="h-4 w-4" aria-hidden />
         Düzenle
       </Link>
-      <Link href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
+      <a href={`/api/documents/${documentId}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
         <Download className="h-4 w-4" aria-hidden />
         İndir
-      </Link>
+      </a>
       <ConfirmActionButton
         endpoint={`/api/documents/${documentId}`}
         label="Sil"

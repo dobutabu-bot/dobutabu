@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useId, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type FormModalProps = {
   open: boolean;
@@ -32,7 +33,7 @@ export function FormModal({ open, title, children, description, onOpenChange }: 
     return null;
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-3"
       role="dialog"
@@ -61,6 +62,7 @@ export function FormModal({ open, title, children, description, onOpenChange }: 
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

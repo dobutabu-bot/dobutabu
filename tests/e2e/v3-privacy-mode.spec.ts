@@ -40,7 +40,8 @@ test.describe("V3 privacy mode", () => {
 
     try {
       await page.goto("/dashboard");
-      await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
+      await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+      await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
       await expect(page.getByTestId("privacy-mode-toggle")).toHaveAttribute("aria-pressed", "false");
       await expect(page.locator("html")).not.toHaveAttribute("data-privacy-mode", "on");
 
@@ -51,7 +52,7 @@ test.describe("V3 privacy mode", () => {
       await expect.poll(() => firstPrivacyMaskContent(page)).toContain("•••••");
 
       await page.reload();
-      await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
+      await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
       await expect(page.getByTestId("privacy-mode-toggle")).toHaveAttribute("aria-pressed", "true");
       await expect(page.locator("html")).toHaveAttribute("data-privacy-mode", "on");
 

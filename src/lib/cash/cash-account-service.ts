@@ -1,4 +1,5 @@
 import { Prisma, type CashAccountType } from "@prisma/client";
+import { cache } from "react";
 
 import { writeAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
@@ -232,7 +233,7 @@ export async function getCashAccountBalance(userId: string, id: string): Promise
   };
 }
 
-export async function getAllCashAccountBalances(userId: string): Promise<CashAccountBalance[]> {
+export const getAllCashAccountBalances = cache(async (userId: string): Promise<CashAccountBalance[]> => {
   const accounts = await prisma.cashAccount.findMany({
     where: { userId, deletedAt: null },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
@@ -274,7 +275,7 @@ export async function getAllCashAccountBalances(userId: string): Promise<CashAcc
       tone: balance > 0 ? "green" : balance < 0 ? "rose" : "neutral"
     };
   });
-}
+});
 
 export async function resolveCashAccountId(userId: string, requestedId?: string | null, db: CashDb = prisma) {
   const cleanId = requestedId?.trim();

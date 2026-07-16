@@ -27,3 +27,16 @@ test-results/
 work/
 .local-home/
 START_LOCAL.command
+
+backups/
+storage/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+recovery-backups/
+artifacts/
+*.log
+*.pid
+LOCAL_REVIEW_LINK.txt
+*.command

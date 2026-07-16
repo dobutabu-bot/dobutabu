@@ -145,14 +145,14 @@ export function PdfJsViewer({ url, title }: PdfJsViewerProps) {
           <p className="mt-1 max-w-xl truncate text-sm font-medium">{title}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="secondary-action min-h-10 border-white/15 bg-white/10 px-3 text-white hover:bg-white/15" onClick={() => setPageNumber((current) => Math.max(1, current - 1))} disabled={!canGoBack}>
+          <button type="button" className="secondary-action min-h-11 border-white/15 bg-white/10 px-3 text-white hover:bg-white/15" onClick={() => setPageNumber((current) => Math.max(1, current - 1))} disabled={!canGoBack}>
             <ChevronLeft className="h-4 w-4" aria-hidden />
             Önceki
           </button>
           <span className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm tabular-nums">
             {pageCount ? `${pageNumber}/${pageCount}` : "-"}
           </span>
-          <button type="button" className="secondary-action min-h-10 border-white/15 bg-white/10 px-3 text-white hover:bg-white/15" onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))} disabled={!canGoForward}>
+          <button type="button" className="secondary-action min-h-11 border-white/15 bg-white/10 px-3 text-white hover:bg-white/15" onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))} disabled={!canGoForward}>
             Sonraki
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>

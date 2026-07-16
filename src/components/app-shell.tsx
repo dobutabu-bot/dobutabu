@@ -1,22 +1,47 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BellRing, FileText, HandCoins, Landmark, LogOut, Menu, PiggyBank, Plus, ReceiptText, UploadCloud, X } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Landmark,
+  LogOut,
+  Plus,
+  Settings,
+  UserCircle,
+  X
+} from "lucide-react";
 
 import { BrowserNotificationManager } from "@/components/browser-notification-manager";
+import { MobileNavigation } from "@/components/mobile-navigation";
 import { GlobalSearch } from "@/components/search/global-search";
+import { GlobalQuickAdd } from "@/components/global-quick-add";
 import { NotificationCenter } from "@/components/notification-center";
 import { PrivacyModeToggle } from "@/components/privacy-mode-toggle";
+import { Sidebar } from "@/components/sidebar";
 import { ToastViewport } from "@/components/toast";
+import { TopBar } from "@/components/top-bar";
 import { subscribeAppDataMutation } from "@/lib/client-sync";
-import { MOBILE_MENU_NAV_ITEMS, NAV_ITEMS, PRIMARY_MOBILE_NAV_ITEMS, SECONDARY_MOBILE_NAV_ITEMS } from "@/lib/navigation";
+import {
+  COMPACT_DESKTOP_NAV_ITEMS,
+  FINANCE_NAV_ITEMS,
+  NAV_GROUPS,
+  NAV_ITEMS,
+  PRIMARY_MOBILE_NAV_ITEMS,
+  SECONDARY_MOBILE_NAV_ITEMS
+} from "@/lib/navigation";
+import type { NavGroup, NavItem } from "@/lib/navigation";
 import type { ReminderNotificationItem } from "@/lib/reminder-notifications";
 import { cn } from "@/lib/utils";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+}
+
+function isSettingsPath(pathname: string) {
+  return pathname === "/activity" || pathname === "/backup" || pathname === "/install" || isActivePath(pathname, "/settings");
 }
 
 function pageReadyTestId(pathname: string) {
@@ -48,10 +73,12 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
     : hydratedPathname?.startsWith("/search")
       ? "Akıllı Arama"
       : current?.label ?? "Panel";
-  const secondaryActive = hydratedPathname
-    ? SECONDARY_MOBILE_NAV_ITEMS.some((item) => isActivePath(hydratedPathname, item.href))
+  const financeMobileActive = hydratedPathname
+    ? FINANCE_NAV_ITEMS.some((item) => isActivePath(hydratedPathname, item.href))
     : false;
-
+  const secondaryActive = hydratedPathname
+    ? !financeMobileActive && SECONDARY_MOBILE_NAV_ITEMS.some((item) => isActivePath(hydratedPathname, item.href))
+    : false;
   useEffect(() => {
     setHydratedPathname(pathname);
     setMobileMenuOpen(false);
@@ -61,6 +88,17 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
   useEffect(() => {
     setLiveReminderNotifications(reminderNotifications);
   }, [reminderNotifications]);
+
+  useEffect(() => {
+    function openQuickAdd(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        setQuickActionsOpen(true);
+      }
+    }
+    window.addEventListener("keydown", openQuickAdd);
+    return () => window.removeEventListener("keydown", openQuickAdd);
+  }, []);
 
   useEffect(() => {
     let refreshTimer: number | null = null;
@@ -73,7 +111,7 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
       refreshTimer = window.setTimeout(() => {
         router.refresh();
       }, 120);
-    });
+    }, { includeSameTab: false });
 
     return () => {
       if (refreshTimer) {
@@ -84,83 +122,68 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
   }, [router]);
 
   return (
-    <div className="min-h-screen" data-app-shell-ready={hydratedPathname ? "true" : "false"}>
-      <aside className="app-sidebar fixed inset-y-0 left-0 hidden w-64 px-4 py-5 text-white lg:block">
-        <Link href="/dashboard" className="digital-glass flex items-center gap-3 p-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-950 shadow-[0_16px_34px_rgba(255,255,255,0.12)]">
+    <div className="min-h-screen" data-app-shell-ready={hydratedPathname === pathname ? "true" : "false"}>
+      <Sidebar>
+        <Link href="/dashboard" prefetch={false} className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white text-slate-950 shadow-[0_16px_34px_rgba(255,255,255,0.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20" aria-label={`${firmName} dashboard`} title={firmName}>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
             <FileText className="h-5 w-5" aria-hidden />
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-white">{firmName}</span>
-            <span className="block truncate text-xs text-slate-400">{user.name}</span>
           </span>
         </Link>
 
-        <nav className="mt-6 space-y-1.5">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = hydratedPathname ? isActivePath(hydratedPathname, item.href) : false;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-slate-300 transition duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20",
-                  active && "bg-white text-slate-950 shadow-[0_14px_30px_rgba(255,255,255,0.08)] hover:bg-white hover:text-slate-950"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
+        <nav className="mt-5 flex min-h-0 flex-1 flex-col items-center gap-2" aria-label="Ana menü">
+          {COMPACT_DESKTOP_NAV_ITEMS.slice(0, 3).map((item) => (
+            <RailNavLink key={item.href} item={item} active={hydratedPathname ? isActivePath(hydratedPathname, item.href) : false} />
+          ))}
+          <FinanceRailMenu pathname={hydratedPathname} />
+          {COMPACT_DESKTOP_NAV_ITEMS.slice(3).map((item) => (
+            <RailNavLink key={item.href} item={item} active={hydratedPathname ? isActivePath(hydratedPathname, item.href) : false} />
+          ))}
         </nav>
 
-        <form action="/api/auth/logout" method="post" className="absolute bottom-5 left-4 right-4">
-          <button
-            type="submit"
-            className="digital-row flex min-h-11 w-full items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 transition duration-200 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20"
-          >
-            <LogOut className="h-4 w-4" aria-hidden />
-            Çıkış
-          </button>
-        </form>
-      </aside>
+        <div className="mt-auto flex flex-col items-center gap-2">
+          <RailNavLink
+            item={{ href: "/settings", label: "Ayarlar", icon: Settings }}
+            active={hydratedPathname ? isSettingsPath(hydratedPathname) : false}
+          />
+          <form action="/api/auth/logout" method="post">
+            <button
+              type="submit"
+              className="group relative flex h-12 w-12 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20"
+              aria-label="Çıkış"
+              title="Çıkış"
+            >
+              <LogOut className="h-5 w-5" aria-hidden />
+              <RailTooltip label="Çıkış" />
+            </button>
+          </form>
+        </div>
+      </Sidebar>
 
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_14px_42px_rgba(15,23,42,0.06)] backdrop-blur-2xl lg:px-8 lg:pt-3">
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="lg:pl-[5.5rem]">
+        <TopBar>
+          <div className="mx-auto flex w-full max-w-[var(--v4-content-max)] flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-slate-500">{firmName}</p>
               <h1 className="truncate text-lg font-semibold text-slate-950">{currentLabel}</h1>
             </div>
-            <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
-              <GlobalSearch />
-              <PrivacyModeToggle />
-              <NotificationCenter items={liveReminderNotifications} />
-              <button
-                type="button"
-                className={cn("icon-button lg:hidden", secondaryActive && "bg-slate-950 text-white")}
-                aria-label="Diğer modülleri aç"
-                aria-expanded={mobileMenuOpen}
-                onClick={() => setMobileMenuOpen(true)}
-              >
-                <Menu className="h-4 w-4" aria-hidden />
-              </button>
-              <form action="/api/auth/logout" method="post" className="lg:hidden">
-                <button type="submit" className="icon-button" aria-label="Çıkış">
-                  <LogOut className="h-4 w-4" aria-hidden />
-                </button>
-              </form>
+            <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
+              <div className="min-w-0 flex-1 sm:flex-none">
+                <GlobalSearch />
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <PrivacyModeToggle />
+                <NotificationCenter items={liveReminderNotifications} />
+                <UserMenu user={user} />
+              </div>
             </div>
           </div>
-        </header>
+        </TopBar>
 
         <main
           className="px-4 py-5 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-8 lg:pb-8"
           data-testid={hydratedPathname ? pageReadyTestId(hydratedPathname) : undefined}
         >
-          {children}
+          <div className="app-content-shell">{children}</div>
         </main>
       </div>
 
@@ -183,42 +206,26 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {MOBILE_MENU_NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const active = hydratedPathname ? isActivePath(hydratedPathname, item.href) : false;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex min-h-12 items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 active:bg-slate-100",
-                      active && "border-slate-950 bg-slate-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)]"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
+            <div className="scroll-y-stable max-h-[min(72vh,34rem)] space-y-5 overflow-x-hidden pr-1">
+              {NAV_GROUPS.map((group) => (
+                <MobileMenuGroup key={group.label} group={group} pathname={hydratedPathname} />
+              ))}
             </div>
           </div>
         </div>
       ) : null}
 
-      <MobileQuickActions open={quickActionsOpen} onOpenChange={setQuickActionsOpen} />
+      <GlobalQuickAdd open={quickActionsOpen} onOpenChange={setQuickActionsOpen} />
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-white/70 bg-white/85 pb-[env(safe-area-inset-bottom)] shadow-[0_-18px_42px_rgba(15,23,42,0.12)] backdrop-blur-2xl lg:hidden"
-        aria-hidden={mobileMenuOpen ? true : undefined}
-      >
+      <MobileNavigation aria-label="Mobil alt navigasyon" aria-hidden={mobileMenuOpen ? true : undefined}>
         {PRIMARY_MOBILE_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = hydratedPathname ? isActivePath(hydratedPathname, item.href) : false;
+          const active = item.href === "/cash" ? financeMobileActive : hydratedPathname ? isActivePath(hydratedPathname, item.href) : false;
           return (
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-500 active:bg-slate-100",
                 active && "text-slate-950"
@@ -231,7 +238,22 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
             </Link>
           );
         })}
-      </nav>
+        <button
+          type="button"
+          className={cn(
+            "flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-500 active:bg-slate-100",
+            (mobileMenuOpen || secondaryActive) && "text-slate-950"
+          )}
+          aria-label="Diğer modülleri aç"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <span className={cn("flex h-8 w-8 items-center justify-center rounded-2xl", (mobileMenuOpen || secondaryActive) && "bg-slate-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)]")}>
+            <Plus className="h-5 w-5" aria-hidden />
+          </span>
+          <span>Daha Fazla</span>
+        </button>
+      </MobileNavigation>
 
       <BrowserNotificationManager
         items={browserReminderNotifications}
@@ -242,66 +264,142 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
   );
 }
 
-function MobileQuickActions({
-  open,
-  onOpenChange
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const actions = [
-    { href: "/collections?create=1", label: "Tahsilat Ekle", icon: HandCoins, tone: "green" },
-    { href: "/expenses?create=1", label: "Gider Ekle", icon: ReceiptText, tone: "rose" },
-    { href: "/documents/new", label: "Belge Yükle", icon: UploadCloud, tone: "blue" },
-    { href: "/bank-statements/import", label: "Banka Ekstresi", icon: Landmark, tone: "blue" },
-    { href: "/capital/assets?create=1", label: "Sermaye Varlığı", icon: PiggyBank, tone: "neutral" },
-    { href: "/reminders?create=1", label: "Hatırlatma Ekle", icon: BellRing, tone: "amber" }
-  ] as const;
+function RailNavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      className={cn(
+        "group relative flex h-12 w-12 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20",
+        active && "bg-white text-slate-950 shadow-[0_14px_30px_rgba(255,255,255,0.08)] hover:bg-white hover:text-slate-950"
+      )}
+      aria-label={item.label}
+      title={item.label}
+    >
+      <Icon className="h-5 w-5" aria-hidden />
+      <RailTooltip label={item.label} />
+    </Link>
+  );
+}
+
+function FinanceRailMenu({ pathname }: { pathname: string | null }) {
+  const active = pathname ? FINANCE_NAV_ITEMS.some((item) => isActivePath(pathname, item.href)) : false;
+  return (
+    <details className="group/finance relative">
+      <summary
+        className={cn(
+          "group relative flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-2xl text-slate-400 transition hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 [&::-webkit-details-marker]:hidden",
+          active && "bg-white text-slate-950 shadow-[0_14px_30px_rgba(255,255,255,0.08)]"
+        )}
+        aria-label="Finans menüsünü aç"
+        title="Finans"
+      >
+        <Landmark className="h-5 w-5" aria-hidden />
+        <RailTooltip label="Finans" />
+      </summary>
+      <div className="absolute left-[calc(100%+0.75rem)] top-0 z-50 w-64 rounded-3xl border border-white/70 bg-white/95 p-3 text-slate-950 shadow-[0_26px_70px_rgba(15,23,42,0.22)] backdrop-blur-2xl">
+        <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Finans</p>
+        <div className="grid gap-1">
+          {FINANCE_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const itemActive = pathname ? isActivePath(pathname, item.href) : false;
+            return (
+              <Link key={item.href} href={item.href} prefetch={false} className={cn("flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900", itemActive && "bg-slate-950 text-white hover:bg-slate-900")}>
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function RailTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-[calc(100%+0.65rem)] top-1/2 z-[60] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block group-focus-visible:block">
+      {label}
+    </span>
+  );
+}
+
+function MobileMenuGroup({ group, pathname }: { group: NavGroup; pathname: string | null }) {
+  return (
+    <section className="min-w-0" aria-label={group.label}>
+      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+        {group.items.map((item) => {
+          const Icon = item.icon;
+          const active = pathname ? isActivePath(pathname, item.href) : false;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              className={cn(
+                "flex min-h-12 min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white/65 px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.05)] active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10",
+                active && "border-slate-950 bg-slate-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)]"
+              )}
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function UserMenu({ user }: { user: { name: string; email: string } }) {
+  const initials = getInitials(user.name || user.email);
 
   return (
-    <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-40 lg:hidden">
-      {open ? (
-        <div className="mb-3 w-[min(19rem,calc(100vw-2rem))] rounded-3xl border border-white/70 bg-white/90 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] backdrop-blur-2xl">
-          <div className="px-2 pb-1 pt-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hızlı işlem</p>
-          </div>
-          <div className="scroll-y-stable grid max-h-[min(70vh,26rem)] gap-1.5 pr-1">
-            {actions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="flex min-h-12 min-w-0 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-800 transition active:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10"
-                >
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-2xl text-white shadow-[0_12px_26px_rgba(15,23,42,0.16)]",
-                      action.tone === "green" && "bg-emerald-700",
-                      action.tone === "rose" && "bg-rose-700",
-                      action.tone === "amber" && "bg-amber-600",
-                      action.tone === "blue" && "bg-blue-700",
-                      action.tone === "neutral" && "bg-slate-950"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="min-w-0 truncate">{action.label}</span>
-                </Link>
-              );
-            })}
-          </div>
+    <details className="group relative">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-2.5 py-1.5 text-sm font-semibold text-slate-800 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 [&::-webkit-details-marker]:hidden">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">
+          {initials || <UserCircle className="h-4 w-4" aria-hidden />}
+        </span>
+        <span className="hidden max-w-28 truncate lg:block">{user.name}</span>
+        <ChevronDown className="hidden h-4 w-4 text-slate-500 transition group-open:rotate-180 sm:block" aria-hidden />
+      </summary>
+
+      <div className="absolute right-0 top-[calc(100%+0.6rem)] z-50 w-[min(18rem,calc(100vw-2rem))] rounded-3xl border border-white/70 bg-white/95 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+        <div className="border-b border-slate-200 px-3 py-3">
+          <p className="truncate text-sm font-semibold text-slate-950">{user.name}</p>
+          <p className="truncate text-xs text-slate-500">{user.email}</p>
         </div>
-      ) : null}
-      <button
-        type="button"
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_20px_45px_rgba(15,23,42,0.30)] transition active:scale-95"
-        aria-label={open ? "Hızlı işlem menüsünü kapat" : "Hızlı işlem menüsünü aç"}
-        aria-expanded={open}
-        onClick={() => onOpenChange(!open)}
-      >
-        {open ? <X className="h-5 w-5" aria-hidden /> : <Plus className="h-5 w-5" aria-hidden />}
-      </button>
-    </div>
+        <Link
+          href="/settings"
+          prefetch={false}
+          className="mt-2 flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10"
+        >
+          <Settings className="h-4 w-4" aria-hidden />
+          Ayarlar
+        </Link>
+        <form action="/api/auth/logout" method="post" className="mt-1">
+          <button
+            type="submit"
+            className="flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-900/10"
+          >
+            <LogOut className="h-4 w-4" aria-hidden />
+            Çıkış
+          </button>
+        </form>
+      </div>
+    </details>
   );
+}
+
+function getInitials(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

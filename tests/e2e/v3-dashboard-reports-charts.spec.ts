@@ -37,19 +37,16 @@ test.describe("V3 dashboard and reports chart performance", () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto("/dashboard");
 
-      await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
-      await expect(page.getByText("V3 Akıllı Merkez")).toBeVisible();
-      await expect(page.getByText("Finans, belge ve sermaye sinyalleri")).toBeVisible();
-      await expect(page.getByTestId("v3-dashboard-tab-documents")).toBeVisible();
-      await expect(page.getByTestId("v3-dashboard-tab-reconciliation")).toHaveAttribute("href", "/cash/reconciliation");
+      await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
+      await expect(page.getByTestId("v5-net-worth-chart")).toBeVisible();
       await expect(page.getByTestId("v3-dashboard-tab-capital")).toHaveAttribute("href", "/capital");
+      await expect(page.getByRole("region", { name: "Bugünün finans özeti" })).toBeVisible();
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(8);
 
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await expect(page.locator('[data-testid="chart-skeleton"], [data-testid="chart-frame"]').first()).toBeVisible();
-      await expect(page.getByTestId("chart-frame").first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId("v5-monthly-metric-cards").locator("article")).toHaveCount(5);
+      await expect(page.locator(".recharts-responsive-container").first()).toBeVisible({ timeout: 15_000 });
 
       guard.assertClean();
     } finally {
@@ -67,8 +64,8 @@ test.describe("V3 dashboard and reports chart performance", () => {
     await setSessionCookie(page, user!.id);
 
     await page.goto("/reports");
-    await expect(page.getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
-    await expect(page.getByText("Raporlar V3")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dijital Finans Analiz Merkezi" })).toBeVisible();
+    await expect(page.getByText("Raporlar V4")).toBeVisible();
     await expect(page.getByRole("link", { name: /Belge/ }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Banka/ }).first()).toBeVisible();
 

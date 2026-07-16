@@ -1,5 +1,5 @@
-import { Archive, ArchiveRestore, DatabaseBackup, Download, FileSpreadsheet, FileText, MonitorDown, ServerCog, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
+import { Archive, ArchiveRestore, DatabaseBackup, Download, FileSpreadsheet, FileText, History, MonitorDown, ServerCog, SlidersHorizontal } from "lucide-react";
+import Link from "@/components/app-link";
 
 import { BrowserNotificationSettings } from "@/components/browser-notification-settings";
 import { EntityForm } from "@/components/entity-form";
@@ -42,6 +42,26 @@ export default async function SettingsPage() {
       />
 
       <BrowserNotificationSettings />
+
+      <section className="surface p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+              <History className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-slate-950 sm:text-sm">İşlem Geçmişi</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Kritik oluşturma, düzenleme, silme, geri alma ve finans hareketlerinin audit kayıtlarını inceleyin.
+              </p>
+            </div>
+          </div>
+          <Link href="/activity" className="secondary-action w-full sm:w-auto">
+            <History className="h-4 w-4" aria-hidden />
+            Geçmişi aç
+          </Link>
+        </div>
+      </section>
 
       <section className="surface p-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

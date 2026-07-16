@@ -8,7 +8,15 @@ import { dateInputValue, formatDate, formatMoney, toNumber } from "@/lib/utils";
 const volatileAssetTypes = new Set<AssetType>(["FX", "GOLD", "STOCK", "CRYPTO", "FUND"]);
 const cashAssetTypes = new Set<AssetType>(["CASH", "BANK"]);
 
-export async function getCapitalCenterData(userId: string, currency = "TRY") {
+type CapitalAssetPagination = {
+  page?: number;
+  pageSize?: number;
+  skip?: number;
+  take?: number;
+  query?: string;
+};
+
+export async function getCapitalCenterData(userId: string, currency = "TRY", assetPagination: CapitalAssetPagination = {}) {
   const valuationCurrency = currency.toUpperCase();
   const [assets, cashBalances, cashAccounts, snapshots, valuationHistory] = await Promise.all([
     prisma.assetAccount.findMany({
@@ -42,6 +50,20 @@ export async function getCapitalCenterData(userId: string, currency = "TRY") {
   ]);
   const cashBalanceMap = new Map(cashBalances.map((balance) => [balance.accountId, balance]));
   const rows = assets.map((asset) => serializeAsset(asset, cashBalanceMap.get(asset.linkedCashAccountId ?? "")));
+  const assetQuery = assetPagination.query?.trim() ?? "";
+  const normalizedAssetQuery = assetQuery.toLocaleLowerCase("tr-TR");
+  const filteredRows = normalizedAssetQuery
+    ? rows.filter((row) =>
+        [row.name, row.symbol, row.currency, row.assetTypeLabel, row.description, row.linkedCashAccountName]
+          .join(" ")
+          .toLocaleLowerCase("tr-TR")
+          .includes(normalizedAssetQuery)
+      )
+    : rows;
+  const assetPageSize = assetPagination.take ?? assetPagination.pageSize ?? rows.length;
+  const assetSkip = assetPagination.skip ?? 0;
+  const assetPage = assetPagination.page ?? Math.floor(assetSkip / Math.max(assetPageSize, 1)) + 1;
+  const pagedRows = filteredRows.slice(assetSkip, assetSkip + assetPageSize);
   const linkedCashAccountIds = new Set(rows.map((asset) => asset.linkedCashAccountId).filter((id): id is string => Boolean(id)));
   const activeRowsForCurrency = rows.filter((row) => row.valuationCurrency === valuationCurrency);
   const totals = calculateTotals(activeRowsForCurrency);
@@ -57,6 +79,7 @@ export async function getCapitalCenterData(userId: string, currency = "TRY") {
 
   return {
     currency: valuationCurrency,
+    assetQuery,
     summary: {
       totalAssets: totals.totalAssets,
       totalAssetsLabel: formatMoney(totals.totalAssets, valuationCurrency),
@@ -89,7 +112,13 @@ export async function getCapitalCenterData(userId: string, currency = "TRY") {
       { label: "Nakit/Banka", value: round(cashTotal) },
       { label: "Diğer", value: round(Math.max(assetBase - cashTotal, 0)) }
     ].filter((item) => item.value > 0),
-    assets: rows,
+    assets: pagedRows,
+    assetPagination: {
+      page: assetPage,
+      pageSize: assetPageSize,
+      totalItems: filteredRows.length,
+      totalPages: Math.max(1, Math.ceil(filteredRows.length / Math.max(assetPageSize, 1)))
+    },
     cashAccountOptions: cashAccounts.map((account) => ({
       id: account.id,
       label: `${account.name} · ${account.currency}${account.isDefault ? " · Varsayılan" : ""}${account.isActive ? "" : " · Pasif"}`,

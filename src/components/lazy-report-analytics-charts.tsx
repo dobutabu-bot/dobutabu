@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 import { ChartSkeleton } from "@/components/charts/chart-frame";
 import type { ReportAnalytics } from "@/lib/reporting";
@@ -11,6 +12,9 @@ const ReportAnalyticsCharts = dynamic(
 );
 
 export function LazyReportAnalyticsCharts({ analytics }: { analytics: ReportAnalytics }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <ReportChartsLoading />;
   return <ReportAnalyticsCharts analytics={analytics} />;
 }
 

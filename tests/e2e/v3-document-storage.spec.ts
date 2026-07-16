@@ -275,7 +275,7 @@ test.describe("V3 private document storage", () => {
       });
       expect(linkResponse.status(), await linkResponse.text()).toBe(200);
       await expect(page.goto(`/collections/${incomeId}`, { waitUntil: "domcontentloaded" })).resolves.toBeTruthy();
-      await expect(page.getByText("Belge Bağlantıları")).toBeVisible();
+      await expect(page.getByText("Belge Bağlantıları", { exact: true })).toBeVisible();
       await expect(page.getByText(`E2E link belge ${stamp}`).first()).toBeVisible();
 
       const linkedDocument = await prisma.document.findUnique({

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   BriefcaseBusiness,
   CircleDollarSign,
   Download,
@@ -10,11 +9,13 @@ import {
   Scale,
   UserRound
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { DataTable } from "@/components/data-table";
+import { DetailActivityLog } from "@/components/detail-activity-log";
+import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
 import { DocumentLinksSection } from "@/components/document-links-section";
 import { MetricCard } from "@/components/metric-card";
 import { RecordEditButton } from "@/components/record-edit-button";
@@ -92,10 +93,10 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
       label: "Dosya No",
       placeholder: "2026/183 K. veya 2024/22943 İstanbul 19. İcra Dairesi"
     },
-    { name: "courtOrOffice", label: "Mahkeme / Daire" },
     { name: "caseType", label: "Dosya Türü" },
-    { name: "status", label: "Durum", type: "select" as const, options: toOptions(caseStatusLabels) },
-    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
+    { name: "courtOrOffice", label: "Mahkeme / Daire", section: "advanced" as const },
+    { name: "status", label: "Durum", type: "select" as const, options: toOptions(caseStatusLabels), section: "advanced" as const },
+    { name: "notes", label: "Not", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3", section: "advanced" as const }
   ];
   const scopedClientOptions = [{ label: caseFile.client.name, value: caseFile.clientId }];
   const scopedCaseOptions = [{ label: `${caseFile.client.name} - ${caseFile.title}`, value: caseFile.id }];
@@ -108,19 +109,21 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
   ];
   const collectionFields = [
     { name: "clientId", label: "Müvekkil", type: "select" as const, options: scopedClientOptions },
-    { name: "caseFileId", label: "Dosya", type: "select" as const, options: scopedCaseOptions },
+    { name: "amount", label: "Tutar", type: "number" as const, min: "0", step: "0.01" },
+    { name: "date", label: "Tarih", type: "date" as const },
+    { name: "description", label: "Açıklama", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" },
+    { name: "caseFileId", label: "Dosya", type: "select" as const, options: scopedCaseOptions, section: "advanced" as const },
     {
       name: "cashAccountId",
       label: "Bu işlem hangi kasaya işlensin?",
       type: "select" as const,
       options: cashAccountOptions,
-      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır."
+      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır.",
+      section: "advanced" as const
     },
-    { name: "amount", label: "Tutar", type: "number" as const, min: "0", step: "0.01" },
-    { name: "currency", label: "Para Birimi" },
-    { name: "date", label: "Tarih", type: "date" as const },
-    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels) },
-    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(incomeCategoryLabels) },
+    { name: "currency", label: "Para Birimi", section: "advanced" as const },
+    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels), section: "advanced" as const },
+    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(incomeCategoryLabels), section: "advanced" as const },
     {
       name: "receiptIssued",
       label: "Makbuz Kesildi mi?",
@@ -128,26 +131,28 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
       options: [
         { label: "Hayır", value: "false" },
         { label: "Evet", value: "true" }
-      ]
+      ],
+      section: "advanced" as const
     },
-    { name: "receiptNumber", label: "Makbuz Numarası" },
-    { name: "description", label: "Açıklama", type: "textarea" as const, className: "md:col-span-2 xl:col-span-3" }
+    { name: "receiptNumber", label: "Makbuz Numarası", section: "advanced" as const }
   ];
   const expenseFields = [
-    { name: "clientId", label: "Müvekkil", type: "select" as const, options: scopedClientOptions },
-    { name: "caseFileId", label: "Dosya", type: "select" as const, options: scopedCaseOptions },
+    { name: "amount", label: "Tutar", type: "number" as const, min: "0", step: "0.01" },
+    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(expenseCategoryLabels) },
+    { name: "date", label: "Tarih", type: "date" as const },
+    { name: "description", label: "Açıklama", type: "textarea" as const, className: "md:col-span-2" },
+    { name: "clientId", label: "Müvekkil", type: "select" as const, options: scopedClientOptions, section: "advanced" as const },
+    { name: "caseFileId", label: "Dosya", type: "select" as const, options: scopedCaseOptions, section: "advanced" as const },
     {
       name: "cashAccountId",
       label: "Bu işlem hangi kasaya işlensin?",
       type: "select" as const,
       options: cashAccountOptions,
-      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır."
+      hint: "Seçim yapılmazsa varsayılan Ana Kasa kullanılır.",
+      section: "advanced" as const
     },
-    { name: "amount", label: "Tutar", type: "number" as const, min: "0", step: "0.01" },
-    { name: "currency", label: "Para Birimi" },
-    { name: "date", label: "Tarih", type: "date" as const },
-    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels) },
-    { name: "category", label: "Kategori", type: "select" as const, options: toOptions(expenseCategoryLabels) },
+    { name: "currency", label: "Para Birimi", section: "advanced" as const },
+    { name: "paymentMethod", label: "Yöntem", type: "select" as const, options: toOptions(paymentMethodLabels), section: "advanced" as const },
     {
       name: "isClientExpense",
       label: "Müvekkile Yansıtılabilir mi?",
@@ -155,9 +160,9 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
       options: [
         { label: "Hayır", value: "false" },
         { label: "Evet", value: "true" }
-      ]
-    },
-    { name: "description", label: "Açıklama", type: "textarea" as const, className: "md:col-span-2" }
+      ],
+      section: "advanced" as const
+    }
   ];
   const receiptFields = [
     { name: "clientId", label: "Müvekkil", type: "select" as const, options: scopedClientOptions },
@@ -175,23 +180,18 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link href="/cases" className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Dosyalara dön
-          </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-semibold text-slate-950">{caseFile.title}</h2>
-            <StatusBadge tone={caseStatusTone(caseFile.status)}>{caseStatusLabels[caseFile.status]}</StatusBadge>
-          </div>
-          <p className="mt-1 text-sm text-slate-500">{caseFile.fileNumber || "Dosya numarası girilmemiş"}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Link href={`/api/reports/case/${caseFile.id}/pdf`} className="secondary-action min-h-10 px-3">
+      <DetailBreadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dosyalar", href: "/cases" }, { label: caseFile.title }]} />
+      <DetailHero
+        eyebrow="Dosya Detayı"
+        title={caseFile.title}
+        description={caseFile.fileNumber || "Dosya numarası girilmemiş"}
+        status={<StatusBadge tone={caseStatusTone(caseFile.status)}>{caseStatusLabels[caseFile.status]}</StatusBadge>}
+        actions={
+          <>
+          <a href={`/api/reports/case/${caseFile.id}/pdf`} className="secondary-action min-h-11 px-3">
             <Download className="h-4 w-4" aria-hidden />
             PDF indir
-          </Link>
+          </a>
           <RecordEditButton
             title="Dosya Düzenle"
             endpoint={`/api/cases/${caseFile.id}`}
@@ -220,8 +220,10 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
               redirectTo="/cases"
             />
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
+      <DetailTabs />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Dosya Tahsilatı" value={formatDirectionalMoney(totalIncome, "IN")} icon={HandCoins} tone="green" />
@@ -231,7 +233,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
         <MetricCard title="Net Durum" value={formatSignedMoney(netBalance)} icon={CircleDollarSign} tone={netBalance >= 0 ? "green" : "rose"} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div id="overview" className="grid scroll-mt-24 gap-5 xl:grid-cols-2">
         <section className="surface p-4">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-950">
             <FileText className="h-4 w-4 text-slate-500" aria-hidden />
@@ -269,7 +271,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
         </section>
       </div>
 
-      <section className="space-y-3">
+      <section id="finance" className="scroll-mt-24 space-y-3">
         <h3 className="text-sm font-semibold text-slate-950">Bu Dosyaya Ait Tahsilatlar</h3>
         <DataTable
           rows={caseFile.incomes}
@@ -290,7 +292,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
             header: "İşlem",
             cell: (row) => (
               <div className="flex flex-wrap gap-2">
-                <Link href={`/collections/${row.id}`} className="secondary-action min-h-10 px-3">
+                <Link href={`/collections/${row.id}`} className="secondary-action min-h-11 px-3">
                   <Eye className="h-4 w-4" aria-hidden />
                   Detay
                 </Link>
@@ -350,7 +352,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
             header: "İşlem",
             cell: (row) => (
               <div className="flex flex-wrap gap-2">
-                <Link href={`/expenses/${row.id}`} className="secondary-action min-h-10 px-3">
+                <Link href={`/expenses/${row.id}`} className="secondary-action min-h-11 px-3">
                   <Eye className="h-4 w-4" aria-hidden />
                   Detay
                 </Link>
@@ -454,13 +456,16 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
         </div>
       </section>
 
-      <DocumentLinksSection
-        entityType="CASE_FILE"
-        entityId={caseFile.id}
-        documents={documentLinks.documents}
-        options={documentLinks.options}
-        uploadHref={documentLinks.uploadHref}
-      />
+      <div id="documents" className="scroll-mt-24">
+        <DocumentLinksSection
+          entityType="CASE_FILE"
+          entityId={caseFile.id}
+          documents={documentLinks.documents}
+          options={documentLinks.options}
+          uploadHref={documentLinks.uploadHref}
+        />
+      </div>
+      <DetailActivityLog userId={user.id} entityType="CASE_FILE" entityId={caseFile.id} />
 
       <section className="surface p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-950">Notlar</h3>

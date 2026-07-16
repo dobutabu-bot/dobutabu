@@ -1,26 +1,21 @@
 import {
-  Bitcoin,
-  BriefcaseBusiness,
-  ChartCandlestick,
   CircleDollarSign,
   Download,
-  Gem,
-  Landmark,
-  PiggyBank,
   Scale,
   TrendingDown,
-  UploadCloud,
-  WalletCards
+  UploadCloud
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
+import { RecordActionMenu } from "@/components/action-menu";
 import { CapitalSnapshotButton } from "@/components/capital-snapshot-button";
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { EmptyState } from "@/components/empty-state";
-import { EntityForm, type EntityFormField } from "@/components/entity-form";
+import type { EntityFormField } from "@/components/entity-form";
 import { CategoryPieChart, FinanceChartPanel, HorizontalBarChart } from "@/components/finance-charts";
 import { MetricCard } from "@/components/metric-card";
+import { Pagination } from "@/components/pagination";
 import { PremiumCard } from "@/components/premium-card";
 import { PrivacyAmount } from "@/components/privacy/privacy-mask";
 import { RecordCreateButton } from "@/components/record-create-button";
@@ -73,17 +68,10 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+      <section className="grid gap-3 md:grid-cols-3">
         <MetricCard title="Toplam Varlık" value={data.summary.totalAssetsLabel} detail="Borçlar hariç pozitif varlıklar" icon={CircleDollarSign} tone="green" />
         <MetricCard title="Toplam Borç" value={data.summary.totalDebtsLabel} detail="Net sermayeden düşülür" icon={TrendingDown} tone="rose" />
         <MetricCard title="Net Sermaye" value={data.summary.netWorthLabel} detail="Toplam varlık - toplam borç" icon={Scale} tone={data.summary.netWorth >= 0 ? "green" : "rose"} />
-        <MetricCard title="Nakit/Banka" value={data.summary.cashBankTotalLabel} detail="Likidite oranı" icon={WalletCards} tone="green" />
-        <MetricCard title="Döviz" value={data.summary.fxTotalLabel} detail="Manuel değerleme" icon={Landmark} />
-        <MetricCard title="Altın" value={data.summary.goldTotalLabel} detail="XAU/gram vb." icon={Gem} tone="amber" />
-        <MetricCard title="Borsa/Fon" value={data.summary.stockTotalLabel} detail="Canlı fiyat yok" icon={ChartCandlestick} />
-        <MetricCard title="Crypto" value={data.summary.cryptoTotalLabel} detail="Manuel kayıt" icon={Bitcoin} />
-        <MetricCard title="Diğer Varlıklar" value={data.summary.otherTotalLabel} detail="Araç, taşınmaz, alacak vb." icon={BriefcaseBusiness} />
-        <MetricCard title="Nakit Oranı" value={`%${data.summary.cashRatio.toLocaleString("tr-TR")}`} detail={`Volatil oran: %${data.summary.volatileRatio.toLocaleString("tr-TR")}`} icon={PiggyBank} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -148,35 +136,36 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
         </section>
       ) : null}
 
-      <EntityForm
-        title="Varlık Ekle"
-        endpoint="/api/capital/assets"
-        schemaKey="assetAccount"
-        defaults={assetDefaults()}
-        fields={assetFields}
-        submitLabel="Varlık ekle"
-        successMessage="Varlık hesabı oluşturuldu."
-      />
-
       <section className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">Varlık Kartları</h2>
           <p className="mt-1 text-sm text-slate-500">Değerleri manuel güncelleyebilir, kasa hesabına bağlı varlıkları dijital kasa bakiyesiyle izleyebilirsiniz.</p>
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
-          <Link href="/api/export?resource=capitalAssets&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
+          <a href="/api/export?resource=capitalAssets&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             Varlık CSV
-          </Link>
-          <Link href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
+          </a>
+          <a href="/api/export?resource=assetValuations&format=csv" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             Değerleme CSV
-          </Link>
-          <Link href="/api/reports/capital/pdf" className="secondary-action min-h-11 px-4 text-sm leading-none">
+          </a>
+          <a href="/api/reports/capital/pdf" className="secondary-action min-h-11 px-4 text-sm leading-none">
             <Download className="h-4 w-4" aria-hidden />
             PDF
-          </Link>
+          </a>
         </div>
+      </section>
+
+      <section className="surface p-4">
+        <form className="flex min-w-0 flex-col gap-2 sm:flex-row" action="/capital/assets">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Arama</span>
+            <input className="field" name="q" defaultValue={data.assetQuery} placeholder="Varlık adı, sembol veya tür ara" />
+          </label>
+          <button className="primary-action min-h-11 justify-center" type="submit">Ara</button>
+          {data.assetQuery ? <Link href="/capital/assets" className="secondary-action min-h-11 justify-center">Temizle</Link> : null}
+        </form>
       </section>
 
       {data.assets.length === 0 ? (
@@ -190,6 +179,20 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
           ))}
         </section>
       )}
+
+      <Pagination
+        page={data.assetPagination.page}
+        totalPages={data.assetPagination.totalPages}
+        totalItems={data.assetPagination.totalItems}
+        pageSize={data.assetPagination.pageSize}
+        hrefForPage={(page) => {
+          const params = new URLSearchParams();
+          if (data.assetQuery) params.set("q", data.assetQuery);
+          if (page > 1) params.set("page", String(page));
+          const query = params.toString();
+          return query ? `/capital/assets?${query}` : "/capital/assets";
+        }}
+      />
     </div>
   );
 }
@@ -209,7 +212,9 @@ function AssetCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-base font-semibold text-slate-950">{asset.name}</h3>
+            <Link href={`/capital/assets/${asset.id}`} className="min-w-0 truncate text-base font-semibold text-slate-950 hover:text-indigo-700 hover:underline">
+              {asset.name}
+            </Link>
             <StatusBadge tone={asset.assetType === "DEBT" ? "rose" : "neutral"}>{asset.assetTypeLabel}</StatusBadge>
           </div>
           <p className="mt-1 text-sm text-slate-500">
@@ -223,7 +228,7 @@ function AssetCard({
       <div className="mt-5">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Toplam değer</p>
         <div className="mt-1">
-          <AmountText value={asset.currentValue} currency={asset.valuationCurrency} showSign={asset.assetType === "DEBT"} size="xl" variant="strong" />
+          <AmountText value={asset.currentValue} currency={asset.valuationCurrency} showSign size="xl" variant="strong" />
         </div>
         <p className="mt-1 text-xs text-slate-500">Son güncelleme: {asset.lastUpdateLabel}</p>
       </div>
@@ -237,7 +242,11 @@ function AssetCard({
 
       {asset.description ? <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">{asset.description}</p> : null}
 
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
+      <div className="mt-4 flex justify-end">
+        <RecordActionMenu label={`${asset.name} varlık işlemleri`}>
+        <Link href={`/capital/assets/${asset.id}`} className="secondary-action min-h-11 px-3">
+          Detay
+        </Link>
         <RecordCreateButton
           label="Güncelle"
           title="Değer Güncelle"
@@ -283,6 +292,7 @@ function AssetCard({
           confirmLabel="Sil"
           successMessage="Varlık hesabı silindi."
         />
+        </RecordActionMenu>
       </div>
     </PremiumCard>
   );

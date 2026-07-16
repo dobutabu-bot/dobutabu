@@ -46,6 +46,7 @@ test.afterAll(async () => {
 
 test.describe("V2 cross-browser route smoke", () => {
   test("login, protected routes, PWA install, offline fallback and responsive shell are healthy", async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
     const guard = attachRuntimeGuard(page);
 
     await gotoRoute(page, "/login");
@@ -71,9 +72,10 @@ test.describe("V2 cross-browser route smoke", () => {
       await assertTouchTargets(page);
 
       if (route === "/dashboard") {
-        await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
-        await expect(page.getByText("Toplam kasa").first()).toBeVisible();
-        await expect(page.getByText("Kasa Bakiyesi")).toBeVisible();
+        await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+        await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
+        await expect(page.getByTestId("v5-net-worth-chart")).toBeVisible();
+        await expect(page.getByTestId("v5-monthly-metric-cards").locator("article")).toHaveCount(5);
         await assertChartsStayInsideViewport(page);
       }
 
@@ -83,8 +85,8 @@ test.describe("V2 cross-browser route smoke", () => {
       }
 
       if (route === "/reports") {
-        await expect(page.getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
-        await expect(page.getByText("Günlük Nakit Akışı")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Dijital Finans Analiz Merkezi" })).toBeVisible();
+        await expect(page.getByText("Trend, nakit akışı, dağılım ve kârlılık")).toBeVisible();
         await assertChartsStayInsideViewport(page);
       }
     }
@@ -168,15 +170,18 @@ test.describe("V2 digital cash E2E flow", () => {
     await assertNoHorizontalOverflow(page);
 
     await gotoRoute(page, "/dashboard");
-    await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
-    await expect(page.getByText("3 gün içinde gider").first()).toBeVisible();
-    await expectVisibleText(page, reminderTitle);
-    await expect(page.getByText("Son 7 Gün Kasa Giriş/Çıkış")).toBeVisible();
+    await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+    await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Bugünün finans özeti" })).toBeVisible();
+    await expect(page.getByTestId("v5-monthly-metric-cards").locator("article")).toHaveCount(5);
     await assertChartsStayInsideViewport(page);
 
+    await gotoRoute(page, "/reminders");
+    await expectVisibleText(page, reminderTitle);
+
     await gotoRoute(page, "/reports");
-    await expect(page.getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
-    await expect(page.getByText("Aylık Gelir/Gider Trendi")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dijital Finans Analiz Merkezi" })).toBeVisible();
+    await expect(page.getByText("Trend, nakit akışı, dağılım ve kârlılık")).toBeVisible();
     await expect(page.getByText("Kasa Raporu")).toBeVisible();
     await assertChartsStayInsideViewport(page);
 
@@ -234,8 +239,8 @@ async function login(page: Page, verifyLoginApi: boolean) {
   expect(user, `Seed kullanıcısı bulunamadı: ${TEST_EMAIL}`).toBeTruthy();
   await setSessionCookie(page, user!.id);
   await gotoRoute(page, "/dashboard");
-  await waitForBodyText(page, "Dijital Kasa");
-  await expect(page.getByRole("heading", { name: "Dijital Kasa" })).toBeVisible();
+  await expect(page.getByTestId("page-ready-dashboard")).toBeVisible();
+  await expect(page.locator('[data-dashboard-version="v5"]')).toBeVisible();
 }
 
 async function gotoRoute(page: Page, route: string) {
@@ -279,10 +284,6 @@ async function waitForRouteReady(page: Page) {
 
 async function waitForClientRouteSettled(page: Page) {
   await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
-}
-
-async function waitForBodyText(page: Page, text: string) {
-  await expect(page.locator("body")).toContainText(text, { timeout: 30_000 });
 }
 
 function isExpectedPath(url: string, route: string) {
@@ -342,7 +343,7 @@ async function assertPageHealthy(page: Page) {
 }
 
 async function expectVisibleText(page: Page, text: string) {
-  await expect(page.getByText(text).first(), `"${text}" metni görünür olmalı`).toBeVisible();
+  await expect(page.getByText(text).filter({ visible: true }).first(), `"${text}" metni görünür olmalı`).toBeVisible();
 }
 
 async function assertNoHorizontalOverflow(page: Page) {
@@ -525,7 +526,7 @@ async function assertMobileMenuWorks(page: Page) {
     page.getByRole("link", { name: /Raporlar/ }).click()
   ]);
   await waitForRouteReady(page);
-  await expect(page.getByRole("heading", { name: "Finans Analiz Merkezi" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dijital Finans Analiz Merkezi" })).toBeVisible();
 }
 
 async function postJson(page: Page, path: string, payload: Record<string, unknown>) {

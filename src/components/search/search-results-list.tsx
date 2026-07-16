@@ -1,5 +1,5 @@
 import { ArrowRight, Building2, FileText, Landmark, Search, WalletCards } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { PrivacyAmount } from "@/components/privacy/privacy-mask";
 import type { GlobalSearchData, SearchResultGroupId, SearchResultItem } from "@/lib/search/types";

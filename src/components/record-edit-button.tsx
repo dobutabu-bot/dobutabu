@@ -55,6 +55,8 @@ export function RecordEditButton({
           resetOnSuccess={false}
           successMessage={resolvedSuccessMessage}
           onSuccess={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+          idPrefix={`${schemaKey}-edit-${endpoint.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
         />
       </FormModal>
     </>

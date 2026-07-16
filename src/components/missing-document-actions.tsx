@@ -1,7 +1,7 @@
 "use client";
 
 import { FilePlus2, Link2, Loader2, MoreHorizontal } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -82,7 +82,7 @@ export function MissingDocumentActions({ record, documentOptions }: MissingDocum
   }
 
   return (
-    <div className="flex min-w-64 flex-col gap-2 lg:min-w-72">
+    <div className="flex w-full min-w-0 flex-col gap-2">
       <div className="flex min-w-0 flex-wrap justify-end gap-2">
         <Link href={record.uploadHref} className="primary-action min-h-11 px-4 text-sm leading-none">
           <FilePlus2 className="h-4 w-4" aria-hidden />

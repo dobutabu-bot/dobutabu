@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, Landmark, Link2Off, Scale, SearchCheck, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
 import { BankRowActionPanel } from "@/components/bank-row-action-panel";
@@ -55,8 +55,8 @@ export function ReconciliationScreen({
       </section>
 
       <section className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Banka Bakiyesi" value={<AmountText value={data.balances.bankBalance} currency={data.balances.currency} showSign={false} size="md" variant="strong" />} icon={<Landmark className="h-4 w-4" aria-hidden />} />
-        <Metric label="Sistem Kasa Bakiyesi" value={<AmountText value={data.balances.systemBalance} currency={data.balances.currency} showSign={false} size="md" variant="strong" />} icon={<Scale className="h-4 w-4" aria-hidden />} />
+        <Metric label="Banka Bakiyesi" value={<AmountText value={data.balances.bankBalance} currency={data.balances.currency} showSign size="md" variant="strong" />} icon={<Landmark className="h-4 w-4" aria-hidden />} />
+        <Metric label="Sistem Kasa Bakiyesi" value={<AmountText value={data.balances.systemBalance} currency={data.balances.currency} showSign size="md" variant="strong" />} icon={<Scale className="h-4 w-4" aria-hidden />} />
         <Metric label="Fark" value={<AmountText value={data.balances.difference} currency={data.balances.currency} showSign size="md" variant="strong" />} icon={<SearchCheck className="h-4 w-4" aria-hidden />} tone={data.balances.tone} />
         <Metric label="Eşleşmiş Hareket" value={`${data.counts.matched} adet`} icon={<ShieldCheck className="h-4 w-4" aria-hidden />} tone="green" />
         <Metric label="Eşleşmemiş Banka" value={`${data.counts.unmatchedBank} adet`} icon={<ArrowUpRight className="h-4 w-4" aria-hidden />} tone={data.counts.unmatchedBank > 0 ? "amber" : "green"} />
@@ -203,6 +203,29 @@ export function ReconciliationScreen({
           ]}
         />
       </section>
+
+      {data.ignoredRows.length > 0 ? (
+        <section className="surface min-w-0 p-4">
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-slate-950">Yoksayılan Hareketler</h2>
+            <p className="mt-1 text-xs text-slate-500">Yanlışlıkla yoksayılan hareketleri buradan yeniden mutabakat listesine alabilirsiniz.</p>
+          </div>
+          <DataTable
+            rows={data.ignoredRows}
+            empty="Yoksayılan hareket yok"
+            columns={[
+              { header: "Tarih", cell: (row) => (row.date ? formatDate(row.date) : "-") },
+              { header: "Açıklama", cell: (row) => <span className="line-clamp-2">{row.description}</span> },
+              { header: "Tutar", cell: (row) => <AmountText value={row.signedAmount} currency={row.currency} showSign size="sm" variant="strong" /> },
+              { header: "Durum", cell: () => <StatusBadge tone="neutral">Yoksayıldı</StatusBadge> },
+              {
+                header: "İşlem",
+                cell: (row) => <BankRowActionPanel row={row} options={data.actionOptions} systemMovements={data.manualOptions.systemMovements} />
+              }
+            ]}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

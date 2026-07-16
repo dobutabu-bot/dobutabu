@@ -2,6 +2,7 @@ import type { CaseStatus } from "@prisma/client";
 
 import { writeAuditLog } from "@/lib/audit";
 import { syncExpenseLedgerEntry, syncIncomeLedgerEntry } from "@/lib/cash-ledger";
+import { restoreV3Record } from "@/lib/db/soft-delete";
 import { prisma } from "@/lib/prisma";
 
 type RestorableCaseStatus = Exclude<CaseStatus, "ARCHIVED">;
@@ -30,7 +31,18 @@ export class RestoreError extends Error {
 }
 
 export async function getDeletedRecords(userId: string) {
-  const [clients, caseFiles, incomes, expenses, invoiceOrReceipts] = await Promise.all([
+  const [
+    clients,
+    caseFiles,
+    incomes,
+    expenses,
+    invoiceOrReceipts,
+    documents,
+    bankStatementImports,
+    cashAccounts,
+    taskReminders,
+    assetAccounts
+  ] = await Promise.all([
     prisma.client.findMany({
       where: { userId, deletedAt: { not: null } },
       orderBy: { deletedAt: "desc" },
@@ -103,10 +115,96 @@ export async function getDeletedRecords(userId: string) {
         client: { select: { id: true, name: true, archivedAt: true, deletedAt: true } },
         caseFile: { select: { id: true, title: true, status: true, archivedAt: true, deletedAt: true } }
       }
+    }),
+    prisma.document.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        documentType: true,
+        originalFileName: true,
+        fileSize: true,
+        documentDate: true,
+        uploadedAt: true,
+        deletedAt: true,
+        linkedClient: { select: { id: true, name: true, archivedAt: true, deletedAt: true } },
+        linkedCaseFile: { select: { id: true, title: true, status: true, archivedAt: true, deletedAt: true } }
+      }
+    }),
+    prisma.bankStatementImport.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        bankName: true,
+        originalFileName: true,
+        sourceType: true,
+        totalRows: true,
+        successfulRows: true,
+        deletedAt: true,
+        cashAccount: { select: { id: true, name: true, deletedAt: true, isActive: true } }
+      }
+    }),
+    prisma.cashAccount.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        currency: true,
+        isDefault: true,
+        isActive: true,
+        deletedAt: true
+      }
+    }),
+    prisma.taskReminder.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        reminderType: true,
+        status: true,
+        priority: true,
+        dueDate: true,
+        amount: true,
+        currency: true,
+        deletedAt: true,
+        relatedClient: { select: { id: true, name: true, archivedAt: true, deletedAt: true } },
+        relatedCaseFile: { select: { id: true, title: true, status: true, archivedAt: true, deletedAt: true } }
+      }
+    }),
+    prisma.assetAccount.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        assetType: true,
+        symbol: true,
+        currency: true,
+        valuationCurrency: true,
+        manualTotalValue: true,
+        deletedAt: true,
+        linkedCashAccount: { select: { id: true, name: true, deletedAt: true, isActive: true } }
+      }
     })
   ]);
 
-  return { clients, caseFiles, incomes, expenses, invoiceOrReceipts };
+  return {
+    clients,
+    caseFiles,
+    incomes,
+    expenses,
+    invoiceOrReceipts,
+    documents,
+    bankStatementImports,
+    cashAccounts,
+    taskReminders,
+    assetAccounts
+  };
 }
 
 export async function getDeletedRecordCounts(userId: string) {
@@ -314,6 +412,92 @@ export async function restoreInvoiceOrReceipt(userId: string, id: string) {
     oldValue: invoiceOrReceipt,
     newValue: restored,
     message: "Makbuz/fatura geri alındı",
+    userId
+  });
+
+  return restored;
+}
+
+export async function restoreDocument(userId: string, id: string) {
+  const restored = await restoreV3Record(userId, "document", id);
+  if (!restored) {
+    throw new RestoreError("Belge bulunamadı veya zaten aktif durumda.");
+  }
+
+  return restored;
+}
+
+export async function restoreBankStatementImport(userId: string, id: string) {
+  const restored = await restoreV3Record(userId, "bankStatementImport", id);
+  if (!restored) {
+    throw new RestoreError("Banka ekstresi bulunamadı veya zaten aktif durumda.");
+  }
+
+  return restored;
+}
+
+export async function restoreAssetAccount(userId: string, id: string) {
+  const restored = await restoreV3Record(userId, "assetAccount", id);
+  if (!restored) {
+    throw new RestoreError("Varlık hesabı bulunamadı veya zaten aktif durumda.");
+  }
+
+  return restored;
+}
+
+export async function restoreCashAccount(userId: string, id: string) {
+  const existing = await ensureDeletedRecordExists("Kasa hesabı", () =>
+    prisma.cashAccount.findFirst({ where: { id, userId, deletedAt: { not: null } } })
+  );
+
+  const restored = await prisma.cashAccount.update({ where: { id }, data: { deletedAt: null, isActive: true } });
+  await writeAuditLog({
+    entityType: "CASH_ACCOUNT",
+    entityId: restored.id,
+    action: "RESTORE",
+    oldValue: existing,
+    newValue: restored,
+    message: "Kasa hesabı geri alındı",
+    userId
+  });
+
+  return restored;
+}
+
+export async function restoreReminder(userId: string, id: string) {
+  const reminder = await ensureDeletedRecordExists("Hatırlatma", () =>
+    prisma.taskReminder.findFirst({
+      where: { id, userId, deletedAt: { not: null } },
+      select: {
+        id: true,
+        relatedClientId: true,
+        relatedCaseFileId: true,
+        relatedClient: { select: { archivedAt: true, deletedAt: true } },
+        relatedCaseFile: {
+          select: {
+            status: true,
+            archivedAt: true,
+            deletedAt: true,
+            client: { select: { archivedAt: true, deletedAt: true } }
+          }
+        }
+      }
+    })
+  );
+
+  if (reminder.relatedClientId) {
+    ensureActiveClient(reminder.relatedClient, "Hatırlatma");
+  }
+  ensureActiveCaseFile(reminder.relatedCaseFile, reminder.relatedCaseFileId, "Hatırlatma");
+
+  const restored = await prisma.taskReminder.update({ where: { id }, data: { deletedAt: null } });
+  await writeAuditLog({
+    entityType: "TASK_REMINDER",
+    entityId: restored.id,
+    action: "RESTORE",
+    oldValue: reminder,
+    newValue: restored,
+    message: "Hatırlatma geri alındı",
     userId
   });
 

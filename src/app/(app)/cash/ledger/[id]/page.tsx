@@ -1,5 +1,5 @@
 import { ArrowLeft, BriefcaseBusiness, FileText, HandCoins, ReceiptText, WalletCards } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { DocumentLinksSection } from "@/components/document-links-section";

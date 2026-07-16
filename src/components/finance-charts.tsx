@@ -13,12 +13,14 @@ import {
   LineChart,
   Pie,
   PieChart,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis
 } from "recharts";
 
 import { ChartFrame, EmptyChartState, ResponsiveChartContainer, type ChartSize } from "@/components/charts/chart-frame";
+import type { ReportFinancialPicturePoint } from "@/lib/reporting";
 import { cn, formatMoney } from "@/lib/utils";
 
 export type FinanceTone = "income" | "expense" | "net" | "balance" | "document" | "neutral";
@@ -282,6 +284,41 @@ export function HorizontalBarChart({
   );
 }
 
+export function FinancialPictureChart({
+  data,
+  size = "lg",
+  className
+}: {
+  data: ReportFinancialPicturePoint[];
+  size?: ChartSize;
+  className?: string;
+}) {
+  if (!data.some((point) => point.value !== 0)) {
+    return (
+      <ChartFrame size={size} className={className}>
+        <EmptyChartState title="Finans hareketi bulunamadı" description="Seçilen dönemde grafik oluşturacak finansal hareket yok." />
+      </ChartFrame>
+    );
+  }
+
+  return (
+    <ResponsiveChartContainer size={size} className={className}>
+      <RechartsBarChart data={data} layout="vertical" margin={{ left: 0, right: 14, top: 8, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={financeChartTheme.colors.grid} horizontal={false} />
+        <XAxis type="number" tickLine={false} axisLine={false} fontSize={12} tickFormatter={compactMoney} />
+        <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} fontSize={12} width={104} />
+        <ReferenceLine x={0} stroke={financeChartTheme.colors.muted} strokeWidth={1} />
+        <Tooltip formatter={moneyTooltip} contentStyle={tooltipStyle} />
+        <Bar dataKey="value" name="Tutar" radius={[6, 6, 6, 6]}>
+          {data.map((point) => (
+            <Cell key={point.label} fill={financialPictureColor(point.tone)} />
+          ))}
+        </Bar>
+      </RechartsBarChart>
+    </ResponsiveChartContainer>
+  );
+}
+
 function hasFlowData(data: FinanceFlowPoint[]) {
   return data.some((point) => point.tahsilat !== 0 || point.gider !== 0 || (point.net ?? 0) !== 0);
 }
@@ -292,6 +329,13 @@ function hasLineData(data: Record<string, string | number>[], series: FinanceLin
 
 function toneColor(tone: FinanceTone) {
   return financeChartTheme.colors[tone];
+}
+
+function financialPictureColor(tone: ReportFinancialPicturePoint["tone"]) {
+  if (tone === "positive") return financeChartTheme.colors.income;
+  if (tone === "negative") return financeChartTheme.colors.expense;
+  if (tone === "attention") return financeChartTheme.colors.balance;
+  return financeChartTheme.colors.neutral;
 }
 
 function moneyTooltip(value: unknown) {

@@ -1,9 +1,11 @@
-import { ArrowDownRight, ArrowLeft, ArrowUpRight, BarChart3, Download, FileText, Landmark, Repeat, Scale, SearchCheck, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Download, FileText, Landmark, Repeat, Scale, SearchCheck, Sparkles } from "lucide-react";
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { AmountText } from "@/components/amount-text";
 import { DataTable } from "@/components/data-table";
+import { DetailActivityLog } from "@/components/detail-activity-log";
+import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { getStatementAnalysis } from "@/lib/bank-analysis/analyze-statement";
@@ -46,22 +48,24 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/bank-statements" className="secondary-action w-fit">
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Banka Ekstrelerine Dön
-        </Link>
-        <div className="flex flex-wrap gap-2">
+      <DetailBreadcrumb items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Banka Ekstreleri", href: "/bank-statements" }, { label: bankImport.bankName }]} />
+      <DetailHero
+        eyebrow="Banka Ekstresi Analizi"
+        title={bankImport.bankName}
+        description={`${bankImport.originalFileName} · ${bankImport.cashAccount?.name ?? "Kasa hesabı seçilmedi"} · ${formatDate(bankImport.periodStart)} - ${formatDate(bankImport.periodEnd)}`}
+        status={<StatusBadge tone={bankImport.failedRows > 0 ? "amber" : "green"}>{bankImport.failedRows > 0 ? "Kontrol gerekli" : "Hazır"}</StatusBadge>}
+        actions={
+          <>
           {bankImport.document ? (
-            <Link href={`/api/documents/${bankImport.document.id}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
+            <a href={`/api/documents/${bankImport.document.id}/download`} className="secondary-action min-h-11 px-4 text-sm leading-none">
               <Download className="h-4 w-4" aria-hidden />
               Orijinal Dosya
-            </Link>
+            </a>
           ) : null}
-          <Link href={`/api/reports/bank-analysis/${bankImport.id}/pdf`} className="secondary-action min-h-11 px-4 text-sm leading-none">
+          <a href={`/api/reports/bank-analysis/${bankImport.id}/pdf`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <FileText className="h-4 w-4" aria-hidden />
             PDF Analiz
-          </Link>
+          </a>
           <Link href={`/bank-statements/${bankImport.id}/analysis`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <BarChart3 className="h-4 w-4" aria-hidden />
             Son 12 Ay
@@ -70,23 +74,12 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
             <SearchCheck className="h-4 w-4" aria-hidden />
             Mutabakat
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
+      <DetailTabs />
 
-      <section className="surface-dark p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">Banka Ekstresi Analizi</p>
-        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-white">{bankImport.bankName}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              {bankImport.originalFileName} · {bankImport.cashAccount?.name ?? "Kasa hesabı seçilmedi"} · {formatDate(bankImport.periodStart)} - {formatDate(bankImport.periodEnd)}
-            </p>
-          </div>
-          <StatusBadge tone={bankImport.failedRows > 0 ? "amber" : "green"}>{bankImport.failedRows > 0 ? "Kontrol gerekli" : "Hazır"}</StatusBadge>
-        </div>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section id="overview" className="grid scroll-mt-24 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Toplam Giriş" value={<AmountText value={cashIn} currency={bankImport.currency} showSign size="md" variant="strong" />} />
         <SummaryCard label="Toplam Çıkış" value={<AmountText value={-cashOut} currency={bankImport.currency} showSign size="md" variant="strong" />} />
         <SummaryCard label="Net Akış" value={<AmountText value={net} currency={bankImport.currency} showSign size="md" variant="strong" />} />
@@ -101,7 +94,7 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
         <section className="rounded-3xl border border-amber-200 bg-amber-50/80 p-4 text-sm leading-6 text-amber-950">{bankImport.notes}</section>
       ) : null}
 
-      <section className="surface-dark p-5">
+      <section id="finance" className="surface-dark scroll-mt-24 p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -187,7 +180,7 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
         </AnalysisPanel>
       </section>
 
-      <section className="surface p-4">
+      <section id="documents" className="surface scroll-mt-24 p-4">
         <div className="mb-3">
           <h2 className="text-sm font-semibold text-slate-950">Satır Analizi</h2>
           <p className="mt-1 text-xs text-slate-500">İlk 500 satır gösterilir. Duplicate ve hatalı satırlar kasa bakiyesine otomatik işlenmez.</p>
@@ -228,6 +221,7 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
           ]}
         />
       </section>
+      <DetailActivityLog userId={user.id} entityType="BANK_STATEMENT_IMPORT" entityId={bankImport.id} />
     </div>
   );
 }
