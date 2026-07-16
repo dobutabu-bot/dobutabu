@@ -20,6 +20,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV DOCUMENT_STORAGE_DIR=/data/documents
+ENV PDF_FONT_PATH=/usr/share/fonts/dejavu/DejaVuSans.ttf
+ENV PDF_FONT_BOLD_PATH=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf
 
 # PDFKit needs a Unicode-capable TTF at runtime. Alpine does not ship fonts in
 # the base image, so generated reports would fail before writing a response.
