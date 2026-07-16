@@ -7,6 +7,7 @@ on:
       - main
       - v2-digital-kasa-release
       - v3-*
+      - hotfix/**
 
 jobs:
   release-gates:
@@ -59,3 +60,8 @@ jobs:
 
       - name: Docker image build smoke
         run: docker build -t buro-finans-v3-ci .
+
+      - name: Docker PDF runtime font smoke
+        run: |
+          docker run --rm --entrypoint sh buro-finans-v3-ci -c \
+            'test -r /usr/share/fonts/ttf-dejavu/DejaVuSans.ttf && test -r /usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf'
