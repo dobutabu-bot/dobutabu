@@ -123,7 +123,8 @@ jobs:
           )
           npx playwright test "${release_specs[@]}" \
             --project="${{ matrix.project }}" \
-            --workers=1
+            --workers=1 \
+            --reporter=line,github
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3006
 
@@ -133,6 +134,18 @@ jobs:
             tests/e2e/final-action-runtime.spec.ts \
             tests/e2e/crud-runtime-verification.spec.ts \
             --project="${{ matrix.project }}" \
-            --workers=1
+            --workers=1 \
+            --reporter=line,github
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3006
+
+      - name: Upload Playwright failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ matrix.project }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
