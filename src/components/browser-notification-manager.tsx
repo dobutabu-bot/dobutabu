@@ -59,7 +59,7 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
   }, [browserItems, deliverReminderItems]);
 
   const checkDueReminders = useCallback(
-    async (force = false, signal?: AbortSignal) => {
+    async (force = false) => {
       if (typeof window === "undefined") {
         return;
       }
@@ -74,8 +74,7 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
       try {
         const response = await fetch("/api/reminders/due", {
           cache: "no-store",
-          credentials: "same-origin",
-          signal
+          credentials: "same-origin"
         });
         if (!response.ok) {
           return;
@@ -102,14 +101,12 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
   }, [deliverNotifications]);
 
   useEffect(() => {
-    const controller = new AbortController();
     const interval = window.setInterval(() => {
-      void checkDueReminders(true, controller.signal);
+      void checkDueReminders(true);
     }, reminderCheckIntervalMs);
 
     return () => {
       window.clearInterval(interval);
-      controller.abort();
     };
   }, [checkDueReminders]);
 
@@ -118,14 +115,12 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
       return;
     }
 
-    const controller = new AbortController();
     const dashboardCheck = window.setTimeout(() => {
-      void checkDueReminders(false, controller.signal);
+      void checkDueReminders(false);
     }, initialReminderCheckDelayMs);
 
     return () => {
       window.clearTimeout(dashboardCheck);
-      controller.abort();
     };
   }, [checkDueReminders, pathname]);
 

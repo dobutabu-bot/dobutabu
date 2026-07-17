@@ -510,7 +510,7 @@ async function submitDialog(dialog: Locator, name = "Güncelle") {
 }
 
 async function clickRowButton(page: Page, rowText: string, buttonName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -519,7 +519,7 @@ async function clickRowButton(page: Page, rowText: string, buttonName: string) {
 }
 
 async function clickRowLink(page: Page, rowText: string, linkName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -528,7 +528,7 @@ async function clickRowLink(page: Page, rowText: string, linkName: string) {
 }
 
 async function deleteTableRow(page: Page, rowText: string, dialogTitle: string, confirmName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -555,7 +555,7 @@ async function deleteArticle(page: Page, articleText: string, dialogTitle: strin
 
 async function restoreFromDeletedRecords(page: Page, tab: string, rowText: string) {
   await gotoReady(page, `/settings/deleted-records?tab=${tab}`);
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -567,6 +567,10 @@ async function restoreFromDeletedRecords(page: Page, tab: string, rowText: strin
   await expect(dialog).toBeHidden({ timeout: 30_000 });
   await settleClientRender(page);
   await expect(row).toBeHidden({ timeout: 30_000 });
+}
+
+function visibleRecord(page: Page, rowText: string) {
+  return page.locator("tr:visible, article:visible").filter({ hasText: rowText }).first();
 }
 
 async function screenshot(page: Page, fileName: string) {
