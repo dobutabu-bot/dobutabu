@@ -64,6 +64,10 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
         return;
       }
 
+      if (!("Notification" in window) || Notification.permission !== "granted") {
+        return;
+      }
+
       const now = Date.now();
       if (!force && now - lastCheckRef.current < reminderCheckThrottleMs) {
         return;

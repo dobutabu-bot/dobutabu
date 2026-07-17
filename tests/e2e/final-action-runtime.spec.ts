@@ -165,7 +165,7 @@ test.setTimeout(600_000);
       state.advanceIncomeId = await findIncomeId(advanceDescription);
       await expect.poll(() => prisma.cashLedgerEntry.count({ where: { incomeId: state.advanceIncomeId } })).toBe(1);
 
-      let advanceRow = page.locator("table tr").filter({ hasText: advanceDescription }).first();
+      let advanceRow = visibleRecord(page, advanceDescription);
       await expect(advanceRow).toBeVisible();
       await advanceRow.getByRole("button", { name: "İşlemler" }).click();
       const advanceMenu = page.getByRole("menu");
@@ -182,7 +182,7 @@ test.setTimeout(600_000);
       await expect.poll(() => prisma.cashLedgerEntry.count({ where: { incomeId: state.advanceIncomeId } })).toBe(1);
 
       await gotoReady(page, `/advances?clientId=${state.clientId}`);
-      advanceRow = page.locator("table tr").filter({ hasText: updatedAdvanceDescription }).first();
+      advanceRow = visibleRecord(page, updatedAdvanceDescription);
       await expect(advanceRow).toBeVisible();
       await advanceRow.getByRole("button", { name: "İşlemler" }).click();
       await page.getByRole("menu").getByRole("button", { name: "Sil" }).click();
