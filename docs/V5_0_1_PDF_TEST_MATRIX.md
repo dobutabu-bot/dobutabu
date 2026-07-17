@@ -58,3 +58,15 @@ Yerel hedefli doğrulama:
 - `npx playwright test tests/e2e/v501-pdf-downloads.spec.ts --project=webkit-desktop --reporter=line`: **PASS (1/1)**
 - 12 gerçek download olayı, PDF imzası, boyut ve metin ayrıştırması: **PASS**
 - WebKit console error: **0**
+
+## CI çalışma yükü izolasyonu
+
+GitHub runner üzerinde iki uzun, yazma ağırlıklı CRUD tarayıcı senaryosu aynı anda 900'den fazla responsive/feature kontrolüyle aynı Next.js sunucusu ve SQLite dosyasını kullanınca ilk denemelerde kaynak yarışları oluşabiliyordu. CI artık test kapsamını eksiltmeden iki ardışık grupta çalışır:
+
+1. PDF, responsive, güvenlik ve feature testlerinin tam tarayıcı matrisi.
+2. `final-action-runtime.spec.ts` ile `crud-runtime-verification.spec.ts` dosyalarının iki worker'lı tam tarayıcı matrisi.
+
+Assertion, retry ve tarayıcı projeleri değiştirilmemiştir. Yerel eşzamanlı doğrulamalar:
+
+- Chromium iki ağır CRUD dosyası, `--workers=2`: **PASS (2/2)**
+- WebKit ağır CRUD + responsive matrisi, `--workers=2`: **PASS (79/79)**
