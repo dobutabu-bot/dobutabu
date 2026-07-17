@@ -13,7 +13,7 @@ jobs:
   release-gates:
     name: Typecheck, lint, build, E2E and Docker smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -51,7 +51,23 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Playwright release matrix
-        run: npx playwright test
+        run: |
+          mapfile -t release_specs < <(
+            find tests/e2e -type f -name '*.spec.ts' \
+              ! -name 'final-action-runtime.spec.ts' \
+              ! -name 'crud-runtime-verification.spec.ts' \
+              | sort
+          )
+          npx playwright test "${release_specs[@]}"
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3006
+
+      - name: Playwright runtime CRUD matrix
+        run: |
+          npx playwright test \
+            tests/e2e/final-action-runtime.spec.ts \
+            tests/e2e/crud-runtime-verification.spec.ts \
+            --workers=2
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3006
 
