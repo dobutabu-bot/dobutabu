@@ -61,12 +61,14 @@ Yerel hedefli doğrulama:
 
 ## CI çalışma yükü izolasyonu
 
-GitHub runner üzerinde iki uzun, yazma ağırlıklı CRUD tarayıcı senaryosu aynı anda 900'den fazla responsive/feature kontrolüyle aynı Next.js sunucusu ve SQLite dosyasını kullanınca ilk denemelerde kaynak yarışları oluşabiliyordu. CI artık test kapsamını eksiltmeden iki ardışık grupta çalışır:
+GitHub runner üzerinde farklı tarayıcı projeleri ve iki uzun, yazma ağırlıklı CRUD senaryosu aynı Next.js sunucusu ile SQLite dosyasını eşzamanlı kullanınca ilk denemelerde kaynak yarışları oluşabiliyordu. CI artık test kapsamını eksiltmeden proje bazlı matris çalıştırır:
 
-1. PDF, responsive, güvenlik ve feature testlerinin tam tarayıcı matrisi.
-2. `final-action-runtime.spec.ts` ile `crud-runtime-verification.spec.ts` dosyalarının iki worker'lı tam tarayıcı matrisi.
+1. Chromium desktop/laptop, Firefox, WebKit/Safari, tablet, iPhone ve Android projelerinin her biri ayrı runner, ayrı SQLite test veritabanı ve ayrı Next.js sunucusu kullanır.
+2. Her projede PDF, responsive, güvenlik ve feature testleri tek worker ile çalışır.
+3. Aynı projede `final-action-runtime.spec.ts` ile `crud-runtime-verification.spec.ts` daha sonra tek worker ile çalışır.
+4. Typecheck, lint, build, unit/service testleri ve Docker font smoke ayrı kalite job'ında çalışır.
 
-Assertion, retry ve tarayıcı projeleri değiştirilmemiştir. Yerel eşzamanlı doğrulamalar:
+Assertion, retry ve tarayıcı kapsamı değiştirilmemiştir. Yerel eşzamanlı doğrulamalar:
 
 - Chromium iki ağır CRUD dosyası, `--workers=2`: **PASS (2/2)**
 - WebKit ağır CRUD + responsive matrisi, `--workers=2`: **PASS (79/79)**
