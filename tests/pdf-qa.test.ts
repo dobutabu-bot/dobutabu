@@ -7,7 +7,7 @@ import { after, test } from "node:test";
 import { Prisma } from "@prisma/client";
 
 import { syncExpenseLedgerEntry, syncIncomeLedgerEntry } from "@/lib/cash/cash-ledger-service";
-import { renderPdfReportToBuffer, type PdfReportInput } from "@/lib/pdf/pdf-document";
+import { pdfResponse, renderPdfReportToBuffer, type PdfReportInput } from "@/lib/pdf/pdf-document";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE } from "@/lib/session";
 
@@ -32,6 +32,13 @@ test("V3-RC1 PDF renderer uzun Türkçe raporu boş/taşan çıktı üretmeden o
   assert.match(text, /TL 1\.245\.000,00|1\.245\.000,00/);
 
   await writeFile(path.join(generatedPdfDir, "long-table-quality.pdf"), buffer);
+});
+
+test("PDF response boş veya HTML içeriğini PDF diye döndürmez", () => {
+  assert.throws(
+    () => pdfResponse(Buffer.from("<html>hata</html>", "utf8"), "hatali.pdf"),
+    /PDF çıktısı doğrulanamadı/
+  );
 });
 
 test("V3-RC1 PDF route kalite provası", async (t) => {

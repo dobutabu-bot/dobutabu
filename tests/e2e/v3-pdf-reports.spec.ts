@@ -28,33 +28,26 @@ test.describe("V3 server-side PDF reports", () => {
   });
 
   test("authenticated PDF routes return private attachment responses", async ({ request }, testInfo) => {
-    test.skip(!["chromium-desktop", "webkit-desktop"].includes(testInfo.project.name), "PDF route indirme testi Chromium ve WebKit hedeflerinde çalışır.");
+    test.skip(
+      !["chromium-desktop", "firefox-desktop", "webkit-desktop", "iphone"].includes(testInfo.project.name),
+      "PDF route indirme testi release tarayıcı matrisinde çalışır."
+    );
 
     const user = await prisma.user.findUnique({ where: { email: TEST_EMAIL } });
     test.skip(!user, `Seed kullanıcısı bulunamadı: ${TEST_EMAIL}`);
 
-    const [client, caseFile, income, expense] = await Promise.all([
-      prisma.client.findFirst({ where: { userId: user!.id, deletedAt: null, archivedAt: null }, select: { id: true } }),
-      prisma.caseFile.findFirst({
-        where: { userId: user!.id, deletedAt: null, archivedAt: null, status: { not: "ARCHIVED" }, client: { deletedAt: null, archivedAt: null } },
-        select: { id: true }
-      }),
-      prisma.income.findFirst({ where: { userId: user!.id, deletedAt: null, client: { deletedAt: null, archivedAt: null } }, select: { id: true } }),
-      prisma.expense.findFirst({ where: { userId: user!.id, deletedAt: null }, select: { id: true } })
-    ]);
     const cookie = `hukuk_finans_session=${createSessionTokenForTest(user!.id)}`;
     const targets = [
-      client ? { label: "Müvekkil cari", path: `/api/reports/client/${client.id}/pdf` } : null,
-      caseFile ? { label: "Dosya finans", path: `/api/reports/case/${caseFile.id}/pdf` } : null,
-      income ? { label: "Tahsilat özeti", path: `/api/reports/collections/${income.id}/pdf` } : null,
-      expense ? { label: "Gider özeti", path: `/api/reports/expenses/${expense.id}/pdf` } : null,
       { label: "Aylık finans", path: "/api/reports/monthly/pdf?range=this-month" },
       { label: "Kasa raporu", path: "/api/reports/cash/pdf" },
-      { label: "Banka analizi", path: "/api/reports/bank-analysis/e2e-placeholder/pdf" },
-      { label: "Sermaye raporu", path: "/api/reports/capital/pdf" }
-    ].filter(Boolean) as Array<{ label: string; path: string }>;
+      { label: "Belge raporu", path: "/api/reports/documents/pdf" },
+      { label: "Banka ekstreleri", path: "/api/reports/bank-statements/pdf" },
+      { label: "Mutabakat", path: "/api/reports/reconciliation/pdf" },
+      { label: "Sermaye raporu", path: "/api/reports/capital/pdf" },
+      { label: "Avans raporu", path: "/api/reports/advances/pdf" }
+    ];
 
-    expect(targets.length).toBeGreaterThanOrEqual(5);
+    expect(targets.length).toBe(7);
 
     for (const target of targets) {
       await expectPdfDownload(request, cookie, target.path, target.label);

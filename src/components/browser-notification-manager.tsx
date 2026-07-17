@@ -16,6 +16,7 @@ type BrowserNotificationManagerProps = {
 
 const reminderCheckIntervalMs = 10 * 60 * 1000;
 const reminderCheckThrottleMs = 30 * 1000;
+const initialReminderCheckDelayMs = 750;
 
 export function BrowserNotificationManager({ items, onNotificationsChecked }: BrowserNotificationManagerProps) {
   const pathname = usePathname();
@@ -63,6 +64,10 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
         return;
       }
 
+      if (!("Notification" in window) || Notification.permission !== "granted") {
+        return;
+      }
+
       const now = Date.now();
       if (!force && now - lastCheckRef.current < reminderCheckThrottleMs) {
         return;
@@ -71,7 +76,10 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
       lastCheckRef.current = now;
 
       try {
-        const response = await fetch("/api/reminders/due", { cache: "no-store" });
+        const response = await fetch("/api/reminders/due", {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
         if (!response.ok) {
           return;
         }
@@ -97,19 +105,27 @@ export function BrowserNotificationManager({ items, onNotificationsChecked }: Br
   }, [deliverNotifications]);
 
   useEffect(() => {
-    void checkDueReminders(true);
-
     const interval = window.setInterval(() => {
       void checkDueReminders(true);
     }, reminderCheckIntervalMs);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+    };
   }, [checkDueReminders]);
 
   useEffect(() => {
-    if (pathname === "/dashboard") {
-      void checkDueReminders();
+    if (pathname !== "/dashboard") {
+      return;
     }
+
+    const dashboardCheck = window.setTimeout(() => {
+      void checkDueReminders(false);
+    }, initialReminderCheckDelayMs);
+
+    return () => {
+      window.clearTimeout(dashboardCheck);
+    };
   }, [checkDueReminders, pathname]);
 
   return null;

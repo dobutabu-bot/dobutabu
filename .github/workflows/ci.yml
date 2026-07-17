@@ -7,12 +7,13 @@ on:
       - main
       - v2-digital-kasa-release
       - v3-*
+      - hotfix/**
 
 jobs:
-  release-gates:
-    name: Typecheck, lint, build, E2E and Docker smoke
+  quality:
+    name: Typecheck, lint, build, unit and Docker smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -46,16 +47,105 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
-
-      - name: Playwright release matrix
-        run: npx playwright test
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:3006
+      - name: Unit and service tests
+        run: npm run test
 
       - name: Docker Compose config smoke
         run: docker compose config
 
       - name: Docker image build smoke
         run: docker build -t buro-finans-v3-ci .
+
+      - name: Docker PDF runtime font smoke
+        run: |
+          docker run --rm --entrypoint sh buro-finans-v3-ci -c \
+            'test -r /usr/share/fonts/dejavu/DejaVuSans.ttf && test -r /usr/share/fonts/dejavu/DejaVuSans-Bold.ttf'
+
+  e2e:
+    name: E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: chromium-laptop
+            browser: chromium
+          - project: firefox-desktop
+            browser: firefox
+          - project: webkit-desktop
+            browser: webkit
+          - project: tablet
+            browser: webkit
+          - project: iphone
+            browser: webkit
+          - project: android
+            browser: chromium
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          printf '\nAUTH_SECRET="local-development-secret-change-me-32chars"\nSESSION_SECRET="local-development-secret-change-me-32chars"\nAPP_URL="http://localhost:3006"\n' >> .env
+
+      - name: Deploy migrations and seed
+        run: |
+          npm run db:deploy
+          npm run db:seed
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps "${{ matrix.browser }}"
+
+      - name: Playwright release matrix
+        run: |
+          mapfile -t release_specs < <(
+            find tests/e2e -type f -name '*.spec.ts' \
+              ! -name 'final-action-runtime.spec.ts' \
+              ! -name 'crud-runtime-verification.spec.ts' \
+              | sort
+          )
+          npx playwright test "${release_specs[@]}" \
+            --project="${{ matrix.project }}" \
+            --workers=1 \
+            --reporter=line,github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3006
+
+      - name: Playwright runtime CRUD matrix
+        run: |
+          npx playwright test \
+            tests/e2e/final-action-runtime.spec.ts \
+            tests/e2e/crud-runtime-verification.spec.ts \
+            --project="${{ matrix.project }}" \
+            --workers=1 \
+            --reporter=line,github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3006
+
+      - name: Upload Playwright failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ matrix.project }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7

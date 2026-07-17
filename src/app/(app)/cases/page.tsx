@@ -130,14 +130,14 @@ export default async function CasesPage({ searchParams }: CasesPageProps) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               <Filter className="h-4 w-4" aria-hidden />
               Filtrele
             </button>
             <Link
               href="/cases"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Temizle
             </Link>

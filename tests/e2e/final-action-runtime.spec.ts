@@ -68,8 +68,6 @@ test.setTimeout(600_000);
     trackRscRequests(page);
 
     await mkdir(screenshotDir, { recursive: true });
-    await cleanupRuntimeRecords("FINAL-RUNTIME-TEST-");
-
     try {
       state.userId = await getAdminUserId();
       await loginThroughUi(page);
@@ -167,7 +165,7 @@ test.setTimeout(600_000);
       state.advanceIncomeId = await findIncomeId(advanceDescription);
       await expect.poll(() => prisma.cashLedgerEntry.count({ where: { incomeId: state.advanceIncomeId } })).toBe(1);
 
-      let advanceRow = page.locator("table tr").filter({ hasText: advanceDescription }).first();
+      let advanceRow = visibleRecord(page, advanceDescription);
       await expect(advanceRow).toBeVisible();
       await advanceRow.getByRole("button", { name: "İşlemler" }).click();
       const advanceMenu = page.getByRole("menu");
@@ -184,7 +182,7 @@ test.setTimeout(600_000);
       await expect.poll(() => prisma.cashLedgerEntry.count({ where: { incomeId: state.advanceIncomeId } })).toBe(1);
 
       await gotoReady(page, `/advances?clientId=${state.clientId}`);
-      advanceRow = page.locator("table tr").filter({ hasText: updatedAdvanceDescription }).first();
+      advanceRow = visibleRecord(page, updatedAdvanceDescription);
       await expect(advanceRow).toBeVisible();
       await advanceRow.getByRole("button", { name: "İşlemler" }).click();
       await page.getByRole("menu").getByRole("button", { name: "Sil" }).click();
@@ -567,7 +565,7 @@ async function submitDialog(dialog: Locator, name = "Güncelle") {
 }
 
 async function clickRowButton(page: Page, rowText: string, buttonName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -576,7 +574,7 @@ async function clickRowButton(page: Page, rowText: string, buttonName: string) {
 }
 
 async function clickRowLink(page: Page, rowText: string, linkName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -585,7 +583,7 @@ async function clickRowLink(page: Page, rowText: string, linkName: string) {
 }
 
 async function deleteTableRow(page: Page, rowText: string, dialogTitle: string, confirmName: string) {
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -612,7 +610,7 @@ async function deleteArticle(page: Page, articleText: string, dialogTitle: strin
 
 async function restoreFromDeletedRecords(page: Page, tab: string, rowText: string) {
   await gotoReady(page, `/settings/deleted-records?tab=${tab}`);
-  const row = page.locator("tr").filter({ hasText: rowText }).first();
+  const row = visibleRecord(page, rowText);
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "İşlemler" }).click();
   const menu = page.getByRole("menu");
@@ -624,6 +622,10 @@ async function restoreFromDeletedRecords(page: Page, tab: string, rowText: strin
   await expect(dialog).toBeHidden({ timeout: 30_000 });
   await settleClientRender(page);
   await expect(row).toBeHidden({ timeout: 30_000 });
+}
+
+function visibleRecord(page: Page, rowText: string) {
+  return page.locator("tr:visible, article:visible").filter({ hasText: rowText }).first();
 }
 
 async function screenshot(page: Page, fileName: string) {
