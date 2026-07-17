@@ -231,14 +231,14 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
           <div className="flex items-end gap-2 md:col-span-2 xl:col-span-1">
             <button
               type="submit"
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 xl:flex-none"
+              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800 xl:flex-none"
             >
               <Filter className="h-4 w-4" aria-hidden />
               Filtrele
             </button>
             <Link
               href="/collections"
-              className="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 xl:flex-none"
+              className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 xl:flex-none"
             >
               Temizle
             </Link>
