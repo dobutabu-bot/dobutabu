@@ -8,7 +8,8 @@
     "build": "prisma generate && next build && node scripts/fix-next-app-chunks.mjs",
     "start": "node scripts/start-production.mjs",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs --test tests/financial-invariants.test.ts tests/document-security.test.ts tests/bank-import-qa.test.ts tests/reconciliation-safety.test.ts tests/pdf-qa.test.ts",
+    "test": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs --test tests/financial-invariants.test.ts tests/document-security.test.ts tests/bank-import-qa.test.ts tests/reconciliation-safety.test.ts tests/pdf-qa.test.ts tests/pdf/pdf-download-client.test.ts",
+    "test:pdf": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs --test tests/pdf/pdf-download-client.test.ts tests/pdf-qa.test.ts",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "seed:v3-realistic": "node --experimental-strip-types --experimental-transform-types --import ./tests/register-ts-paths.mjs scripts/seed-v3-realistic.ts",
@@ -27,6 +28,7 @@
     "bundle:analyze": "node scripts/bundle-report.mjs",
     "ui:v4:screenshots": "node scripts/capture-ui-v4-review.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:production-regression": "playwright test tests/e2e/full-production-regression.spec.ts",
     "test:final-actions": "playwright test tests/e2e/final-action-runtime.spec.ts --project=chromium-desktop",
     "test:e2e:ui": "playwright test --ui",
     "setup": "prisma generate && prisma migrate deploy && prisma db seed"
