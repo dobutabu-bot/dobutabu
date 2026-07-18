@@ -150,9 +150,11 @@ async function login(page: Page) {
 }
 
 async function expectRealPdfDownload(page: Page, label: string) {
-  const link = page.getByRole("link", { name: label, exact: true }).first();
-  await expect(link).toBeVisible();
-  const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
+  const button = page.getByRole("button", { name: label, exact: true });
+  await expect(button).toHaveCount(1);
+  await expect(button).toBeVisible();
+  const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
+  await expect(page.getByRole("status")).toContainText("PDF indirme işlemi başlatıldı.");
 
   expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
   const downloadPath = await download.path();
