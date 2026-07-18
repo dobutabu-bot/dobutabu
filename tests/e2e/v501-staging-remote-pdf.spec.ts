@@ -33,6 +33,13 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
     "/bank-statements",
     /^\/bank-statements\/(?!import(?:[/?#]|$)|analysis(?:[/?#]|$))[^/?#]+$/
   );
+  const missingDetailSurfaces = [
+    !clientHref ? "client" : null,
+    !caseHref ? "case" : null,
+    !collectionHref ? "collection" : null,
+    !expenseHref ? "expense" : null,
+    !bankHref ? "bank-statement" : null
+  ].filter(Boolean);
 
   const downloads = [
     { page: "/reports", label: "Aylık PDF", expectedTitle: "Aylık Finans Raporu" },
@@ -62,7 +69,12 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
     expectedText?: RegExp;
   }>;
 
-  expect(downloads.length, "Staging matrisi tanımlı 13 PDF yüzeyinin tamamını bulmalı.").toBe(13);
+  expect(
+    downloads.length,
+    `Staging matrisi tanımlı 13 PDF yüzeyinin tamamını bulmalı. Eksik detaylar: ${
+      missingDetailSurfaces.join(", ") || "yok"
+    }`
+  ).toBe(13);
 
   const parsedDownloads: Array<{ label: string; bytes: number; pages: number; text: string }> = [];
   for (const target of downloads) {
@@ -153,6 +165,7 @@ test("uc nokta menusundeki PDF aksiyonu gercek download baslatir", async ({ page
   expect(triggerCount).toBeGreaterThan(0);
   const trigger = triggers.nth(0);
   await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute("data-action-menu-ready", "true");
   await trigger.click();
   const menuItems = page.getByRole("menu").locator("a[href], button");
   await expect(menuItems.nth(0)).toContainText("Detay");
@@ -177,17 +190,31 @@ async function findOptionalDetailHref(page: Page, listPath: string, pattern: Reg
   await expect(page).not.toHaveURL(/\/login/);
   await page.waitForLoadState("networkidle");
   await waitForAppContent(page);
+  const routeReadyTestId = {
+    "/collections": "collections-content-ready",
+    "/expenses": "expenses-content-ready"
+  }[listPath];
+  if (routeReadyTestId) {
+    await expect(page.getByTestId(routeReadyTestId)).toBeAttached();
+  }
   await expect(page.locator("main")).toBeVisible();
-  const hrefs = await page.locator("main a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href")).filter(Boolean));
+  const hrefs = await page.locator("main a[href]").evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href")).filter(Boolean)
+  );
   const directHref = hrefs.find((candidate) => candidate && pattern.test(candidate));
   if (directHref) return directHref;
 
   const actionTriggers = page.getByRole("button", { name: "İşlemler" });
-  if ((await actionTriggers.count()) === 0) return null;
+  const actionTriggerCount = await actionTriggers.count();
+  if (actionTriggerCount === 0) return null;
 
-  await actionTriggers.first().click();
-  const detailItem = page.getByRole("menu").getByRole("link", { name: "Detay", exact: true });
-  if ((await detailItem.count()) !== 1) return null;
+  const actionTrigger = actionTriggers.nth(0);
+  await expect(actionTrigger).toHaveAttribute("data-action-menu-ready", "true");
+  await actionTrigger.click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const detailItem = menu.getByRole("link", { name: "Detay", exact: true });
+  await expect(detailItem).toHaveCount(1);
 
   const menuHref = await detailItem.getAttribute("href");
   return menuHref && pattern.test(menuHref) ? menuHref : null;
