@@ -186,7 +186,7 @@ async function findOptionalDetailHref(page: Page, listPath: string, pattern: Reg
   if ((await actionTriggers.count()) === 0) return null;
 
   await actionTriggers.first().click();
-  const detailItem = page.getByRole("menuitem", { name: "Detay", exact: true });
+  const detailItem = page.getByRole("menu").getByRole("link", { name: "Detay", exact: true });
   if ((await detailItem.count()) !== 1) return null;
 
   const menuHref = await detailItem.getAttribute("href");
