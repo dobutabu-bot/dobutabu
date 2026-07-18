@@ -14,8 +14,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare-staging-fixtures:
+    name: Prepare anonymous staging PDF fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout canonical hotfix commit
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Install Chromium runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare missing staging PDF surfaces
+        run: npx playwright test -c playwright.staging.config.ts tests/e2e/v501-staging-fixture-setup.spec.ts --project=chromium-desktop --workers=1
+
+      - name: Upload fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-pdf-fixture-evidence
+          path: test-results/v501-staging-fixture
+          if-no-files-found: ignore
+          retention-days: 7
+
   staging-browser-matrix:
     name: ${{ matrix.label }} staging PDF and route matrix
+    needs: prepare-staging-fixtures
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
