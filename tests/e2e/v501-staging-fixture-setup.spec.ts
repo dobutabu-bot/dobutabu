@@ -28,7 +28,7 @@ test("staging PDF matrisi icin anonim ve izlenebilir kayitlar olusturur", async 
       }),
       "müvekkil"
     );
-    clientId = await findDetailId(page, `/clients?q=${encodeURIComponent(marker)}`, /^\/clients\/([^/?#]+)$/);
+    clientId = await findSearchDetailId(page, "/clients/");
   }
 
   let caseId = await findOptionalDetailId(page, "/cases", /^\/cases\/([^/?#]+)$/);
@@ -47,7 +47,7 @@ test("staging PDF matrisi icin anonim ve izlenebilir kayitlar olusturur", async 
       }),
       "dosya"
     );
-    caseId = await findDetailId(page, `/cases?q=${encodeURIComponent(marker)}`, /^\/cases\/([^/?#]+)$/);
+    caseId = await findSearchDetailId(page, "/cases/");
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -71,11 +71,7 @@ test("staging PDF matrisi icin anonim ve izlenebilir kayitlar olusturur", async 
       }),
       "tahsilat"
     );
-    collectionId = await findDetailId(
-      page,
-      `/collections?q=${encodeURIComponent(marker)}`,
-      /^\/collections\/([^/?#]+)$/
-    );
+    collectionId = await findSearchDetailId(page, "/collections/");
   }
 
   let expenseId = await findOptionalDetailId(page, "/expenses", /^\/expenses\/([^/?#]+)$/);
@@ -97,7 +93,7 @@ test("staging PDF matrisi icin anonim ve izlenebilir kayitlar olusturur", async 
       }),
       "gider"
     );
-    expenseId = await findDetailId(page, `/expenses?q=${encodeURIComponent(marker)}`, /^\/expenses\/([^/?#]+)$/);
+    expenseId = await findSearchDetailId(page, "/expenses/");
   }
 
   let bankImportId = await findOptionalDetailId(
@@ -159,22 +155,27 @@ async function login(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
-async function findDetailId(page: Page, listUrl: string, pattern: RegExp) {
-  await page.goto(listUrl, { waitUntil: "networkidle" });
-  const hrefs = await page.locator("main a[href]").evaluateAll((links) =>
-    links.map((link) => link.getAttribute("href")).filter((href): href is string => Boolean(href))
-  );
-  const match = hrefs.map((href) => href.match(pattern)).find(Boolean);
-  expect(match?.[1], `${listUrl} detay kimliği`).toBeTruthy();
-  return match![1];
-}
-
 async function findOptionalDetailId(page: Page, listUrl: string, pattern: RegExp) {
   await page.goto(listUrl, { waitUntil: "networkidle" });
   const hrefs = await page.locator("main a[href]").evaluateAll((links) =>
     links.map((link) => link.getAttribute("href")).filter((href): href is string => Boolean(href))
   );
   return hrefs.map((href) => href.match(pattern)?.[1]).find(Boolean) ?? null;
+}
+
+async function findSearchDetailId(page: Page, hrefPrefix: string) {
+  const response = await page.request.get(`/api/search?q=${encodeURIComponent(marker)}`);
+  await expectApiOk(response, "global arama");
+  const payload = (await response.json()) as {
+    groups?: Array<{ items?: Array<{ href?: string }> }>;
+  };
+  const href = payload.groups
+    ?.flatMap((group) => group.items ?? [])
+    .map((item) => item.href)
+    .find((candidate) => candidate?.startsWith(hrefPrefix));
+  const id = href?.split("/").filter(Boolean).at(-1);
+  expect(id, `${hrefPrefix} staging fixture kimliği`).toBeTruthy();
+  return id!;
 }
 
 async function expectApiOk(response: { ok(): boolean; status(): number; text(): Promise<string> }, label: string) {
