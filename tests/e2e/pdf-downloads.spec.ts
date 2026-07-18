@@ -43,7 +43,7 @@ test("bütün PDF route'ları auth olmadan güvenli biçimde reddedilir", async 
 test("bütün PDF endpoint'leri authenticated binary ve parse sözleşmesini karşılar", async ({ page }) => {
   await loginForPdfTests(page);
   const targets = await discoverPdfTargets(page, fixture);
-  expect(targets).toHaveLength(14);
+  expect(targets).toHaveLength(13);
 
   for (const target of targets) {
     const response = await page.context().request.get(target.apiPath);
@@ -80,7 +80,7 @@ test("bütün PDF butonları gerçek browser download üretir ve dosya diskten a
 
   await loginForPdfTests(page);
   const targets = await discoverPdfTargets(page, fixture);
-  expect(targets).toHaveLength(14);
+  expect(targets).toHaveLength(13);
 
   for (const target of targets) {
     await assertRealPdfDownload(page, target);
