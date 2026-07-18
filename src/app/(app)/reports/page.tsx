@@ -179,7 +179,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="reports-content-ready">
       <section className="surface-dark overflow-hidden">
         <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
