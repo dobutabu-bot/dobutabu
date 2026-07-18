@@ -103,6 +103,9 @@ Düzeltme sonrası yerel doğrulama:
 - Unit/service tests: 105 PASS, 0 FAIL, 2 beklenen entegrasyon skip
 - Chromium gerçek PDF ve kritik route E2E: 7 PASS
 
+Staging servisi yalnız doğrulanmış hotfix branch HEAD'iyle temiz build başlatmak
+için yeniden tetiklendi. Production servisi ve production verileri değiştirilmedi.
+
 ## Karar
 
 Staging PDF blocker'ları kapatıldı. Bu rapor production GO kararı değildir.
