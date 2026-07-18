@@ -26,27 +26,30 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
   );
 
   const downloads = [
-    { page: "/reports", label: "Aylık PDF" },
-    { page: "/reports", label: "Kasa PDF" },
-    { page: "/reports", label: "Belge PDF" },
-    { page: "/reports", label: "Banka PDF" },
-    { page: "/reports", label: "Mutabakat PDF" },
-    { page: "/reports", label: "Sermaye PDF" },
-    { page: "/advances", label: "PDF Rapor" },
-    clientHref ? { page: clientHref, label: "PDF indir" } : null,
-    caseHref ? { page: caseHref, label: "PDF indir" } : null,
-    collectionHref ? { page: collectionHref, label: "PDF indir" } : null,
-    expenseHref ? { page: expenseHref, label: "PDF indir" } : null,
-    bankHref ? { page: bankHref, label: "PDF Analiz" } : null
-  ].filter(Boolean) as Array<{ page: string; label: string }>;
+    { page: "/reports", label: "Aylık PDF", expectedTitle: "Aylık Finans Raporu" },
+    { page: "/reports", label: "Kasa PDF", expectedTitle: "Kasa Hareketleri Raporu" },
+    { page: "/receipts", label: "PDF indir", expectedTitle: "Makbuz / Fatura Takip Raporu" },
+    { page: "/reports", label: "Belge PDF", expectedTitle: "Belge Raporu" },
+    { page: "/reports", label: "Banka PDF", expectedTitle: "Banka Ekstresi Analiz Raporu" },
+    { page: "/reports", label: "Mutabakat PDF", expectedTitle: "Mutabakat Raporu" },
+    { page: "/reports", label: "Sermaye PDF", expectedTitle: "Sermaye / Varlık Raporu" },
+    { page: "/advances", label: "PDF Rapor", expectedTitle: "Masraf Avansları Raporu" },
+    clientHref ? { page: clientHref, label: "PDF indir", expectedTitle: "Müvekkil Cari Raporu" } : null,
+    caseHref ? { page: caseHref, label: "PDF indir", expectedTitle: "Dosya Finans Raporu" } : null,
+    collectionHref
+      ? { page: collectionHref, label: "PDF indir", expectedTitle: "Tahsilat Makbuz / Özet PDF" }
+      : null,
+    expenseHref ? { page: expenseHref, label: "PDF indir", expectedTitle: "Gider Özet PDF" } : null,
+    bankHref ? { page: bankHref, label: "PDF Analiz", expectedTitle: "Banka Ekstresi Analiz Raporu" } : null
+  ].filter(Boolean) as Array<{ page: string; label: string; expectedTitle: string }>;
 
-  expect(downloads.length).toBeGreaterThanOrEqual(7);
+  expect(downloads.length).toBeGreaterThanOrEqual(8);
 
   for (const target of downloads) {
     await page.goto(target.page, { waitUntil: "networkidle" });
     await expect(page).not.toHaveURL(/\/login/);
     await waitForAppContent(page);
-    await expectRealPdfDownload(page, target.label);
+    await expectRealPdfDownload(page, target.label, "button", target.expectedTitle);
   }
 
   expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
@@ -84,7 +87,9 @@ test("PDF butonu cift tiklamayi engeller ve JSON hatayi dosya olarak indirmez", 
     (element as HTMLButtonElement).click();
   });
 
-  await expect(page.getByRole("status")).toContainText("Rapor filtreleri veya tarih aralığı geçersiz.");
+  await expect(page.getByRole("status")).toContainText(
+    "Rapor parametreleri geçerli değil. Destek kodu: pdf-ui-error-1234"
+  );
   await expect(button).toBeEnabled();
   expect(requestCount).toBe(1);
   expect(downloadCount).toBe(0);
@@ -101,7 +106,11 @@ test("uc nokta menusundeki PDF aksiyonu gercek download baslatir", async ({ page
   const trigger = triggers.nth(0);
   await expect(trigger).toBeVisible();
   await trigger.click();
-  await expectRealPdfDownload(page, "PDF indir", "menuitem");
+  const menuItems = page.getByRole("menu").locator("a[href], button");
+  await expect(menuItems.nth(0)).toContainText("Detay");
+  await expect(menuItems.nth(1)).toContainText("Düzenle");
+  await expect(menuItems.nth(2)).toContainText("PDF indir");
+  await expectRealPdfDownload(page, "PDF indir", "menuitem", "Müvekkil Cari Raporu");
 });
 
 async function login(page: Page) {
@@ -123,7 +132,12 @@ async function findOptionalDetailHref(page: Page, listPath: string, pattern: Reg
   return hrefs.find((candidate) => candidate && pattern.test(candidate)) ?? null;
 }
 
-async function expectRealPdfDownload(page: Page, label: string, role: "button" | "menuitem" = "button") {
+async function expectRealPdfDownload(
+  page: Page,
+  label: string,
+  role: "button" | "menuitem" = "button",
+  expectedTitle?: string
+) {
   const button = page.getByRole(role, { name: label, exact: true });
   await expect(button).toHaveCount(1);
   await expect(button).toBeVisible();
@@ -142,6 +156,9 @@ async function expectRealPdfDownload(page: Page, label: string, role: "button" |
   try {
     const parsed = await parser.getText();
     expect((parsed.text ?? "").trim().length, `${label}: ayrıştırılmış içerik`).toBeGreaterThan(20);
+    if (expectedTitle) {
+      expect(parsed.text ?? "", `${label}: beklenen rapor başlığı`).toContain(expectedTitle);
+    }
   } finally {
     await parser.destroy();
   }
