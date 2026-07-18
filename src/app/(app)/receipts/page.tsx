@@ -8,6 +8,7 @@ import { EntityForm } from "@/components/entity-form";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -116,6 +117,8 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
   appendReceiptFilters(csvParams, filters);
   const xlsParams = new URLSearchParams({ resource: "receipts", format: "xls" });
   appendReceiptFilters(xlsParams, filters);
+  const pdfParams = new URLSearchParams();
+  appendReceiptFilters(pdfParams, filters);
 
   return (
     <div className="space-y-5">
@@ -123,6 +126,13 @@ export default async function ReceiptsPage({ searchParams }: ReceiptsPageProps) 
         eyebrow="Finans"
         title="Makbuz / Fatura"
         description="Takip amaçlı makbuz ve fatura kayıtlarını filtreleyin, dışa aktarın ve durumlarını yönetin."
+        actions={
+          <PdfDownloadButton
+            endpoint={`/api/reports/receipts/pdf?${pdfParams.toString()}`}
+            label="PDF indir"
+            fileNameFallback="makbuz-fatura-takip.pdf"
+          />
+        }
       />
 
       <section className="surface flex gap-3 border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
