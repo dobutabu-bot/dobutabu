@@ -8,10 +8,19 @@ const password = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
 test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
   test.setTimeout(180_000);
   const consoleErrors: string[] = [];
+  const failedRequests: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
+  page.on("requestfailed", (request) => {
+    recordRequestFailure(failedRequests, request);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      failedRequests.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+    }
+  });
 
   await login(page);
 
@@ -28,7 +37,12 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
   const downloads = [
     { page: "/reports", label: "Aylık PDF", expectedTitle: "Aylık Finans Raporu" },
     { page: "/reports", label: "Kasa PDF", expectedTitle: "Kasa Hareketleri Raporu" },
-    { page: "/receipts", label: "PDF indir", expectedTitle: "Makbuz / Fatura Takip Raporu" },
+    {
+      page: "/receipts",
+      label: "PDF indir",
+      expectedTitle: "Makbuz / Fatura Takip Raporu",
+      expectedText: /BELGE SAYISI\s*0/i
+    },
     { page: "/reports", label: "Belge PDF", expectedTitle: "Belge Raporu" },
     { page: "/reports", label: "Banka PDF", expectedTitle: "Banka Ekstresi Analiz Raporu" },
     { page: "/reports", label: "Mutabakat PDF", expectedTitle: "Mutabakat Raporu" },
@@ -41,23 +55,44 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
       : null,
     expenseHref ? { page: expenseHref, label: "PDF indir", expectedTitle: "Gider Özet PDF" } : null,
     bankHref ? { page: bankHref, label: "PDF Analiz", expectedTitle: "Banka Ekstresi Analiz Raporu" } : null
-  ].filter(Boolean) as Array<{ page: string; label: string; expectedTitle: string }>;
+  ].filter(Boolean) as Array<{
+    page: string;
+    label: string;
+    expectedTitle: string;
+    expectedText?: RegExp;
+  }>;
 
   expect(downloads.length).toBeGreaterThanOrEqual(8);
 
+  const parsedDownloads: Array<{ label: string; bytes: number; pages: number; text: string }> = [];
   for (const target of downloads) {
     await page.goto(target.page, { waitUntil: "networkidle" });
     await expect(page).not.toHaveURL(/\/login/);
     await waitForAppContent(page);
-    await expectRealPdfDownload(page, target.label, "button", target.expectedTitle);
+    parsedDownloads.push(
+      await expectRealPdfDownload(
+        page,
+        target.label,
+        "button",
+        target.expectedTitle,
+        target.expectedText
+      )
+    );
   }
 
+  expect(
+    parsedDownloads.some((download) => download.pages >= 2 && download.bytes > 20_000),
+    "Staging verisi en az bir çok sayfalı ve anlamlı büyüklükte PDF üretmeli."
+  ).toBe(true);
+  expect(
+    parsedDownloads.map((download) => download.text).join("\n"),
+    "Türkçe rapor başlıkları PDF metninde bozulmamalı."
+  ).toMatch(/Müvekkil|Aylık|Tahsilat|Masraf Avansları/);
   expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
+  expect(failedRequests, failedRequests.join("\n")).toEqual([]);
 });
 
-test("PDF butonu cift tiklamayi engeller ve JSON hatayi dosya olarak indirmez", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium-desktop", "İstemci hata ve çift tıklama testi Chromium üzerinde tek kez çalışır.");
-
+test("PDF butonu cift tiklamayi engeller ve JSON hatayi dosya olarak indirmez", async ({ page }) => {
   await login(page);
   await page.goto("/reports", { waitUntil: "networkidle" });
 
@@ -95,8 +130,21 @@ test("PDF butonu cift tiklamayi engeller ve JSON hatayi dosya olarak indirmez", 
   expect(downloadCount).toBe(0);
 });
 
-test("uc nokta menusundeki PDF aksiyonu gercek download baslatir", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium-desktop", "Menü download testi Chromium üzerinde tek kez çalışır.");
+test("uc nokta menusundeki PDF aksiyonu gercek download baslatir", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  const failedRequests: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+  page.on("requestfailed", (request) => {
+    recordRequestFailure(failedRequests, request);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      failedRequests.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+    }
+  });
 
   await login(page);
   await page.goto("/clients", { waitUntil: "networkidle" });
@@ -111,6 +159,8 @@ test("uc nokta menusundeki PDF aksiyonu gercek download baslatir", async ({ page
   await expect(menuItems.nth(1)).toContainText("Düzenle");
   await expect(menuItems.nth(2)).toContainText("PDF indir");
   await expectRealPdfDownload(page, "PDF indir", "menuitem", "Müvekkil Cari Raporu");
+  expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
+  expect(failedRequests, failedRequests.join("\n")).toEqual([]);
 });
 
 async function login(page: Page) {
@@ -136,7 +186,8 @@ async function expectRealPdfDownload(
   page: Page,
   label: string,
   role: "button" | "menuitem" = "button",
-  expectedTitle?: string
+  expectedTitle?: string,
+  expectedText?: RegExp
 ) {
   const button = page.getByRole(role, { name: label, exact: true });
   await expect(button).toHaveCount(1);
@@ -155,10 +206,21 @@ async function expectRealPdfDownload(
   const parser = new PDFParse({ data: buffer });
   try {
     const parsed = await parser.getText();
+    const info = await parser.getInfo();
     expect((parsed.text ?? "").trim().length, `${label}: ayrıştırılmış içerik`).toBeGreaterThan(20);
+    expect(info.total, `${label}: sayfa sayısı`).toBeGreaterThanOrEqual(1);
     if (expectedTitle) {
       expect(parsed.text ?? "", `${label}: beklenen rapor başlığı`).toContain(expectedTitle);
     }
+    if (expectedText) {
+      expect(parsed.text ?? "", `${label}: beklenen rapor içeriği`).toMatch(expectedText);
+    }
+    return {
+      label,
+      bytes: buffer.byteLength,
+      pages: info.total,
+      text: parsed.text ?? ""
+    };
   } finally {
     await parser.destroy();
   }
@@ -169,4 +231,19 @@ async function waitForAppContent(page: Page) {
   await expect(page.locator('form[data-form-ready="false"]')).toHaveCount(0, { timeout: 30_000 });
   await expect(page.locator('[data-toast-ready="true"]')).toBeAttached({ timeout: 30_000 });
   await expect(page.locator("main")).toBeVisible({ timeout: 30_000 });
+}
+
+function recordRequestFailure(
+  failures: string[],
+  request: import("@playwright/test").Request
+) {
+  const errorText = request.failure()?.errorText ?? "request failed";
+  const path = new URL(request.url()).pathname;
+  const isFirefoxStaticIconCancellation =
+    errorText === "NS_BINDING_ABORTED" &&
+    (path === "/icon.svg" || path === "/pwa-icons/apple-touch-icon.png");
+
+  if (!isFirefoxStaticIconCancellation) {
+    failures.push(`${request.method()} ${request.url()} ${errorText}`);
+  }
 }
