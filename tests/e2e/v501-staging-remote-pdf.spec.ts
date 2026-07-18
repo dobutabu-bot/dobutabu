@@ -179,7 +179,18 @@ async function findOptionalDetailHref(page: Page, listPath: string, pattern: Reg
   await waitForAppContent(page);
   await expect(page.locator("main")).toBeVisible();
   const hrefs = await page.locator("main a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href")).filter(Boolean));
-  return hrefs.find((candidate) => candidate && pattern.test(candidate)) ?? null;
+  const directHref = hrefs.find((candidate) => candidate && pattern.test(candidate));
+  if (directHref) return directHref;
+
+  const actionTriggers = page.getByRole("button", { name: "İşlemler" });
+  if ((await actionTriggers.count()) === 0) return null;
+
+  await actionTriggers.first().click();
+  const detailItem = page.getByRole("menuitem", { name: "Detay", exact: true });
+  if ((await detailItem.count()) !== 1) return null;
+
+  const menuHref = await detailItem.getAttribute("href");
+  return menuHref && pattern.test(menuHref) ? menuHref : null;
 }
 
 async function expectRealPdfDownload(
