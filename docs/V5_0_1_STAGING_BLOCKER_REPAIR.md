@@ -84,6 +84,25 @@ değiştirmeden yapılan yeniden koşu tamamen PASS oldu.
 - Chromium PDF ve kritik route: PASS
 - Firefox/WebKit/iPhone/Android PDF ve kritik route: PASS
 
+## 18 Temmuz Toast Kontratı Build Onarımı
+
+Railway'in `2f508a94e8feb489a7ce98ecfcba0663547380d0` commit'i için başlattığı temiz
+build, `use-pdf-download.ts` içindeki iki parametreli `showToast` çağrısının aynı
+commit'teki tek parametreli ortak toast kontratıyla uyuşmaması nedeniyle typecheck
+aşamasında durdu. PDF, auth veya veri iş mantığı değiştirilmeden iki çağrı ortak
+kontrata uyarlandı.
+
+Düzeltme commit'i: `36271de357688e0733716a0974f765f1882e3bcd`.
+
+Düzeltme sonrası yerel doğrulama:
+
+- Prisma generate: PASS
+- Typecheck: PASS
+- Lint: PASS
+- Production build: PASS
+- Unit/service tests: 105 PASS, 0 FAIL, 2 beklenen entegrasyon skip
+- Chromium gerçek PDF ve kritik route E2E: 7 PASS
+
 ## Karar
 
 Staging PDF blocker'ları kapatıldı. Bu rapor production GO kararı değildir.
