@@ -1,0 +1,52 @@
+name: V5.0.1 Staging Firefox Matrix
+
+on:
+  push:
+    branches:
+      - hotfix/v5.0.1-pdf-stability
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-firefox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firefox-staging:
+    name: Firefox staging PDF and route matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout hotfix
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Install Firefox runtime
+        run: npx playwright install --with-deps firefox
+
+      - name: Run strict Firefox PDF matrix
+        run: npx playwright test -c playwright.staging.config.ts tests/e2e/v501-staging-remote-pdf.spec.ts --project=firefox-desktop --workers=1
+
+      - name: Run Firefox critical route matrix three times
+        run: npx playwright test -c playwright.staging.config.ts tests/e2e/full-production-regression.spec.ts --project=firefox-desktop --workers=1 --grep "ana route matrisi" --repeat-each=3
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-firefox-failure-evidence
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
