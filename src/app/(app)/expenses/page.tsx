@@ -360,6 +360,9 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           )
         }
       />
+      <span className="sr-only" data-testid="expenses-content-ready">
+        Gider listesi hazır
+      </span>
     </div>
   );
 }
