@@ -247,7 +247,7 @@ export default async function AdvancesPage({ searchParams }: AdvancesPageProps) 
   const pdfHref = createAdvancePdfHref(filters);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="advances-content-ready">
       <PageHeader
         eyebrow="Finans"
         title="Masraf Avansları"
