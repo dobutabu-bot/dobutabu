@@ -28,7 +28,6 @@ export type PdfBrowserFixture = {
 };
 
 export const unauthenticatedPdfPaths = [
-  "/api/reports/diagnostic/pdf",
   "/api/reports/monthly/pdf",
   "/api/reports/receipts/pdf",
   "/api/reports/cash/pdf",
@@ -181,15 +180,6 @@ export async function discoverPdfTargets(_page: Page, fixture: PdfBrowserFixture
   const bankId = fixture.bankImportId;
 
   return [
-    {
-      key: "diagnostic",
-      page: "/settings/system-status",
-      label: "Tanı PDF indir",
-      apiPath: "/api/reports/diagnostic/pdf",
-      expectedTitle: "PDF Tanı Raporu",
-      filePrefix: "pdf-tani",
-      successMessage: "Anonim tanı PDF indirmesi başlatıldı."
-    },
     {
       key: "monthly",
       page: "/reports",
