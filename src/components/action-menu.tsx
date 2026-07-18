@@ -22,8 +22,13 @@ export function ActionMenu({ label = "İşlemler", children, align = "right", cl
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -110,6 +115,7 @@ export function ActionMenu({ label = "İşlemler", children, align = "right", cl
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        data-action-menu-ready={mounted ? "true" : "false"}
         onClick={toggleMenu}
         onKeyDown={handleTriggerKeyDown}
       >
