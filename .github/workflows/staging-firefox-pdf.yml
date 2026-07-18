@@ -1,9 +1,6 @@
 name: V5.0.1 Staging Firefox Matrix
 
 on:
-  push:
-    branches:
-      - hotfix/v5.0.1-pdf-stability
   workflow_dispatch:
 
 permissions:
