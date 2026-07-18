@@ -7,7 +7,6 @@ on:
       - main
       - v2-digital-kasa-release
       - v3-*
-      - hotfix/**
 
 jobs:
   quality:
