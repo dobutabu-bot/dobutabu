@@ -1,7 +1,6 @@
 import {
   BriefcaseBusiness,
   CircleDollarSign,
-  Download,
   Eye,
   FileText,
   HandCoins,
@@ -18,6 +17,7 @@ import { DetailActivityLog } from "@/components/detail-activity-log";
 import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
 import { DocumentLinksSection } from "@/components/document-links-section";
 import { MetricCard } from "@/components/metric-card";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -188,10 +188,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
         status={<StatusBadge tone={caseStatusTone(caseFile.status)}>{caseStatusLabels[caseFile.status]}</StatusBadge>}
         actions={
           <>
-          <a href={`/api/reports/case/${caseFile.id}/pdf`} className="secondary-action min-h-11 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            PDF indir
-          </a>
+          <PdfDownloadButton href={`/api/reports/case/${caseFile.id}/pdf`} label="PDF indir" />
           <RecordEditButton
             title="Dosya Düzenle"
             endpoint={`/api/cases/${caseFile.id}`}
