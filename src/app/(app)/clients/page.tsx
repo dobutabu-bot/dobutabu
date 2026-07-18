@@ -8,6 +8,7 @@ import { RecordCreateButton } from "@/components/record-create-button";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { PdfActionMenuItem } from "@/components/pdf-download-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -156,6 +157,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 >
                   Detay
                 </Link>
+                <PdfActionMenuItem href={`/api/reports/client/${row.id}/pdf`} label="PDF indir" />
                 <Link href={`/documents/new?linkedClientId=${row.id}`} className="secondary-action min-h-11 px-3">
                   Belge bağla
                 </Link>
