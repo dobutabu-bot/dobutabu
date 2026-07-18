@@ -62,7 +62,7 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
     expectedText?: RegExp;
   }>;
 
-  expect(downloads.length).toBeGreaterThanOrEqual(8);
+  expect(downloads.length, "Staging matrisi tanımlı 13 PDF yüzeyinin tamamını bulmalı.").toBe(13);
 
   const parsedDownloads: Array<{ label: string; bytes: number; pages: number; text: string }> = [];
   for (const target of downloads) {
