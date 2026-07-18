@@ -157,10 +157,6 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 >
                   Detay
                 </Link>
-                <PdfActionMenuItem href={`/api/reports/client/${row.id}/pdf`} label="PDF indir" />
-                <Link href={`/documents/new?linkedClientId=${row.id}`} className="secondary-action min-h-11 px-3">
-                  Belge bağla
-                </Link>
                 <RecordEditButton
                   title="Müvekkil Düzenle"
                   endpoint={`/api/clients/${row.id}`}
@@ -178,6 +174,10 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                     notes: row.notes ?? ""
                   }}
                 />
+                <PdfActionMenuItem href={`/api/reports/client/${row.id}/pdf`} label="PDF indir" />
+                <Link href={`/documents/new?linkedClientId=${row.id}`} className="secondary-action min-h-11 px-3">
+                  Belge bağla
+                </Link>
                 {row.archivedAt ? null : <ClientArchiveButton clientId={row.id} />}
               </div>
             )
