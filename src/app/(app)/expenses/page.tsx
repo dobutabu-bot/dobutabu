@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { PdfActionMenuItem } from "@/components/pdf-download-button";
 import { RecordCreateButton } from "@/components/record-create-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { requireUser } from "@/lib/auth";
@@ -303,6 +304,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   <Eye className="h-4 w-4" aria-hidden />
                   Detay
                 </Link>
+                <PdfActionMenuItem href={`/api/reports/expenses/${row.id}/pdf`} label="PDF indir" />
                 <Link href={`/documents/new?linkedExpenseId=${row.id}`} className="secondary-action min-h-11 px-3">
                   Belge bağla
                 </Link>
