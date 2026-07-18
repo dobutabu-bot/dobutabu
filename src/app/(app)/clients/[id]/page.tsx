@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, CircleDollarSign, Download, HandCoins, ReceiptText, Scale } from "lucide-react";
+import { BriefcaseBusiness, CircleDollarSign, HandCoins, ReceiptText, Scale } from "lucide-react";
 import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { DetailActivityLog } from "@/components/detail-activity-log";
 import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
 import { DocumentLinksSection } from "@/components/document-links-section";
 import { MetricCard } from "@/components/metric-card";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -129,10 +130,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         }
         actions={
           <>
-          <a href={`/api/reports/client/${client.id}/pdf`} className="secondary-action min-h-11 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            PDF indir
-          </a>
+          <PdfDownloadButton href={`/api/reports/client/${client.id}/pdf`} label="PDF indir" />
           {client.archivedAt ? null : (
             <>
             <RecordEditButton
