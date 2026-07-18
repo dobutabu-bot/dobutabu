@@ -352,6 +352,9 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
           )
         }
       />
+      <span className="sr-only" data-testid="collections-content-ready">
+        Tahsilat listesi hazır
+      </span>
     </div>
   );
 }
