@@ -21,6 +21,7 @@ import { FinanceTicker } from "@/components/finance-ticker";
 import { LazyFinancialPictureChart } from "@/components/lazy-financial-picture-chart";
 import { LazyReportAnalyticsCharts } from "@/components/lazy-report-analytics-charts";
 import { MetricCard } from "@/components/metric-card";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildV3ReportsData, type V3Metric, type V3ReportsData, type V3SeriesPoint } from "@/lib/reports/v3-report-data";
@@ -83,13 +84,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const bankStatementPdfHref = `/api/reports/bank-statements/pdf?${pdfParams.toString()}`;
   const reconciliationPdfHref = `/api/reports/reconciliation/pdf?${pdfParams.toString()}`;
   const exportLinks = [
-    { label: "Ana CSV", href: csvHref, tone: "secondary" },
-    { label: "Aylık PDF", href: monthlyPdfHref, tone: "secondary" },
-    { label: "Kasa PDF", href: cashPdfHref, tone: "secondary" },
-    { label: "Belge PDF", href: documentPdfHref, tone: "secondary" },
-    { label: "Banka PDF", href: bankStatementPdfHref, tone: "secondary" },
-    { label: "Mutabakat PDF", href: reconciliationPdfHref, tone: "secondary" },
-    { label: "Sermaye PDF", href: "/api/reports/capital/pdf", tone: "primary" }
+    { label: "Ana CSV", href: csvHref, tone: "secondary", format: "csv" },
+    { label: "Aylık PDF", href: monthlyPdfHref, tone: "secondary", format: "pdf" },
+    { label: "Kasa PDF", href: cashPdfHref, tone: "secondary", format: "pdf" },
+    { label: "Belge PDF", href: documentPdfHref, tone: "secondary", format: "pdf" },
+    { label: "Banka PDF", href: bankStatementPdfHref, tone: "secondary", format: "pdf" },
+    { label: "Mutabakat PDF", href: reconciliationPdfHref, tone: "secondary", format: "pdf" },
+    { label: "Sermaye PDF", href: "/api/reports/capital/pdf", tone: "primary", format: "pdf" }
   ];
   const v3CsvHrefs = {
     documents: reportExportHref("v3Documents", filters),
@@ -388,16 +389,21 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          {exportLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${item.tone === "primary" ? "primary-action" : "secondary-action"} min-h-11 px-3`}
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {item.label}
-            </Link>
-          ))}
+          {exportLinks.map((item) =>
+            item.format === "pdf" ? (
+              <PdfDownloadButton
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                tone={item.tone === "primary" ? "primary" : "secondary"}
+              />
+            ) : (
+              <Link key={item.href} href={item.href} className="secondary-action min-h-11 px-3">
+                <Download className="h-4 w-4" aria-hidden />
+                {item.label}
+              </Link>
+            )
+          )}
         </div>
       </section>
 
@@ -443,10 +449,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
             </Link>
-            <Link href={monthlyPdfHref} className="secondary-action min-h-11 px-3">
-              <Download className="h-4 w-4" aria-hidden />
-              PDF indir
-            </Link>
+            <PdfDownloadButton href={monthlyPdfHref} label="PDF indir" />
           </div>
         </div>
         <DataTable<Record<string, string>>
@@ -671,10 +674,7 @@ function V3ReportBlock({
             <Download className="h-4 w-4" aria-hidden />
             CSV
           </Link>
-          <Link href={pdfHref} className="primary-action min-h-11 px-3">
-            <Download className="h-4 w-4" aria-hidden />
-            PDF
-          </Link>
+          <PdfDownloadButton href={pdfHref} label="PDF" tone="primary" />
         </div>
       </div>
 
