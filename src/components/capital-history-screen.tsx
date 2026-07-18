@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { FinanceChartPanel, HorizontalBarChart, MiniLineChart } from "@/components/finance-charts";
 import { MetricCard } from "@/components/metric-card";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import type { getCapitalCenterData } from "@/lib/capital/capital-data";
 import { assetValuationSourceLabels } from "@/lib/labels";
 import { formatMoney } from "@/lib/utils";
@@ -60,10 +61,11 @@ export function CapitalHistoryScreen({ data }: { data: CapitalCenterData }) {
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
             </a>
-            <a href="/api/reports/capital/pdf" className="secondary-action min-h-[44px] px-4 text-sm leading-none">
-              <Download className="h-4 w-4" aria-hidden />
-              PDF indir
-            </a>
+            <PdfDownloadButton
+              href="/api/reports/capital/pdf"
+              label="PDF indir"
+              className="px-4 text-sm leading-none"
+            />
           </div>
         </div>
         {data.latestValuations.length === 0 ? (
