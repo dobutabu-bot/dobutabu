@@ -2,6 +2,7 @@ const chunkLoadRecoveryScript = `
 (() => {
   const retryKey = "buro-finans-chunk-recovery-v1";
   const retryParam = "__chunk_retry";
+  let pageIsUnloading = false;
 
   function errorText(value) {
     if (typeof value === "string") return value;
@@ -25,7 +26,7 @@ const chunkLoadRecoveryScript = `
 
   function recover(event) {
     if (!isChunkLoadFailure(event)) return;
-    if (document.visibilityState === "hidden") return;
+    if (pageIsUnloading || document.visibilityState === "hidden") return;
     if (window.sessionStorage.getItem(retryKey) === "pending") return;
 
     if (typeof event.preventDefault === "function") {
@@ -38,10 +39,17 @@ const chunkLoadRecoveryScript = `
     window.location.replace(url.toString());
   }
 
+  window.addEventListener("beforeunload", () => {
+    pageIsUnloading = true;
+  });
+  window.addEventListener("pagehide", () => {
+    pageIsUnloading = true;
+  });
   window.addEventListener("error", recover, true);
   window.addEventListener("unhandledrejection", recover);
 
   window.addEventListener("load", () => {
+    pageIsUnloading = false;
     window.setTimeout(() => {
       window.sessionStorage.removeItem(retryKey);
     }, 2000);
