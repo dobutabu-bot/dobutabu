@@ -25,6 +25,7 @@ const chunkLoadRecoveryScript = `
 
   function recover(event) {
     if (!isChunkLoadFailure(event)) return;
+    if (document.visibilityState === "hidden") return;
     if (window.sessionStorage.getItem(retryKey) === "pending") return;
 
     if (typeof event.preventDefault === "function") {
