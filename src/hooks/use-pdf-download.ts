@@ -44,12 +44,12 @@ export function usePdfDownload({
         endpoint: resolvedEndpoint,
         fileNameFallback: fileNameFallback ?? fallbackFileName
       });
-      showToast(successMessage, "success");
+      showToast(successMessage);
       return true;
     } catch (downloadError) {
       const message = safePdfDownloadErrorMessage(downloadError);
       setError(message);
-      showToast(message, "error");
+      showToast(message);
       return false;
     } finally {
       pendingRef.current = false;
