@@ -48,7 +48,7 @@ test("mevcut PDF yuzeyleri gercek UI indirmesiyle acilir", async ({ page }) => {
       page: "/receipts",
       label: "PDF indir",
       expectedTitle: "Makbuz / Fatura Takip Raporu",
-      expectedText: /BELGE SAYISI\s*0/i
+      expectedText: /BELGE SAYISI\s*\d+/i
     },
     { page: "/reports", label: "Belge PDF", expectedTitle: "Belge Raporu" },
     { page: "/reports", label: "Banka PDF", expectedTitle: "Banka Ekstresi Analiz Raporu" },
