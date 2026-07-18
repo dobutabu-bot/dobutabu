@@ -1,4 +1,4 @@
-name: V5.0.1 Staging Firefox Matrix
+name: V5.0.1 Exact Staging Browser Matrix
 
 on:
   workflow_dispatch:
@@ -7,16 +7,35 @@ permissions:
   contents: read
 
 concurrency:
-  group: staging-firefox-${{ github.ref }}
+  group: staging-exact-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  firefox-staging:
-    name: Firefox staging PDF and route matrix
+  staging-browser-matrix:
+    name: ${{ matrix.label }} staging PDF and route matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Chromium desktop
+            project: chromium-desktop
+            browser: chromium
+          - label: Firefox desktop
+            project: firefox-desktop
+            browser: firefox
+          - label: WebKit desktop
+            project: webkit-desktop
+            browser: webkit
+          - label: iPhone WebKit
+            project: iphone
+            browser: webkit
+          - label: Android Chromium
+            project: android
+            browser: chromium
     steps:
-      - name: Checkout hotfix
+      - name: Checkout canonical hotfix commit
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -28,20 +47,20 @@ jobs:
       - name: Install exact dependencies
         run: npm ci
 
-      - name: Install Firefox runtime
-        run: npx playwright install --with-deps firefox
+      - name: Install browser runtime
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Run strict Firefox PDF matrix
-        run: npx playwright test -c playwright.staging.config.ts tests/e2e/v501-staging-remote-pdf.spec.ts --project=firefox-desktop --workers=1
+      - name: Run strict staging PDF matrix
+        run: npx playwright test -c playwright.staging.config.ts tests/e2e/v501-staging-remote-pdf.spec.ts --project=${{ matrix.project }} --workers=1
 
-      - name: Run Firefox critical route matrix three times
-        run: npx playwright test -c playwright.staging.config.ts tests/e2e/full-production-regression.spec.ts --project=firefox-desktop --workers=1 --grep "ana route matrisi" --repeat-each=3
+      - name: Run critical route regression
+        run: npx playwright test -c playwright.staging.config.ts tests/e2e/full-production-regression.spec.ts --project=${{ matrix.project }} --workers=1 --grep "ana route matrisi"
 
       - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: staging-firefox-failure-evidence
+          name: staging-${{ matrix.project }}-failure-evidence
           path: |
             test-results
             playwright-report
