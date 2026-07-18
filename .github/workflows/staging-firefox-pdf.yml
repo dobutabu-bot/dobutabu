@@ -1,9 +1,6 @@
 name: V5.0.1 Exact Staging Browser Matrix
 
 on:
-  push:
-    branches:
-      - hotfix/v5.0.1-pdf-stability
   workflow_dispatch:
 
 permissions:
