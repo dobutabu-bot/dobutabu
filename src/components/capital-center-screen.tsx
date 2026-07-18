@@ -32,7 +32,7 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
   const assetFields = assetAccountFields(data.cashAccountOptions);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="capital-content-ready">
       <section className="surface-dark overflow-hidden p-5">
         <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
