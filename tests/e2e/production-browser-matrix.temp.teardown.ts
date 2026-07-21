@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { chromium, expect, type Page } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://dobutabu-production.up.railway.app";
@@ -9,6 +9,7 @@ const password = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
 const statePath = "artifacts/production-browser-matrix/state.json";
 
 export default async function globalTeardown() {
+  await mkdir("artifacts/production-browser-matrix", { recursive: true });
   const state = JSON.parse(await readFile(statePath, "utf8")) as {
     createdCase: boolean;
     createdDocument: boolean;
