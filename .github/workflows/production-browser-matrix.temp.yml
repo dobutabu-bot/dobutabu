@@ -20,6 +20,7 @@ jobs:
     env:
       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      PRODUCTION_SESSION_TOKEN: ${{ secrets.PRODUCTION_SESSION_TOKEN }}
     strategy:
       fail-fast: false
       max-parallel: 1
