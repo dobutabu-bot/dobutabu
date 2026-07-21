@@ -134,10 +134,10 @@ for (const target of downloadTargets) {
 
     await login(page);
     await page.goto(target.page());
-    await expect(page).not.toHaveURL(/\\/login/);
+    await expect(page).not.toHaveURL(/\/login/);
     await expectRealPdfDownload(page, target.label);
 
-    expect(consoleErrors, consoleErrors.join("\\n")).toEqual([]);
+    expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
   });
 }
 
