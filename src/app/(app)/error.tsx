@@ -1,9 +1,43 @@
 "use client";
 
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+const CHUNK_RECOVERY_WINDOW_MS = 15_000;
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  void error;
+  const chunkLoadFailure = useMemo(
+    () =>
+      /ChunkLoadError|Loading chunk [0-9]+ failed|Failed to load chunk/i.test(
+        `${error.name} ${error.message}`,
+      ),
+    [error.message, error.name],
+  );
+  const [recoveringChunk, setRecoveringChunk] = useState(chunkLoadFailure);
+
+  useEffect(() => {
+    if (!chunkLoadFailure) return;
+
+    const retryKey = `buro-finans-chunk-boundary-v1:${window.location.pathname}`;
+    const lastRetry = Number(window.sessionStorage.getItem(retryKey) ?? "0");
+    if (Date.now() - lastRetry < CHUNK_RECOVERY_WINDOW_MS) {
+      setRecoveringChunk(false);
+      return;
+    }
+
+    window.sessionStorage.setItem(retryKey, String(Date.now()));
+    const url = new URL(window.location.href);
+    url.searchParams.set("__chunk_retry", String(Date.now()));
+    window.location.replace(url.toString());
+  }, [chunkLoadFailure]);
+
+  if (recoveringChunk) {
+    return (
+      <section aria-live="polite" className="surface-dark flex min-h-[320px] items-center justify-center p-6">
+        <p className="text-sm font-medium text-slate-200">Sayfa güvenli biçimde yeniden yükleniyor...</p>
+      </section>
+    );
+  }
 
   return (
     <section className="surface-dark flex min-h-[320px] items-center justify-center p-6">

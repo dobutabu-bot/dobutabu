@@ -10,6 +10,7 @@ import { EntityForm, type EntityFormField } from "@/components/entity-form";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { appendCashLedgerFilters, cashLedgerFiltersFromRecord, type CashLedgerFilters } from "@/lib/cash/cash-ledger-query";
@@ -286,10 +287,11 @@ export default async function CashLedgerPage({ searchParams }: CashLedgerPagePro
               <Download className="h-4 w-4" aria-hidden />
               CSV indir
             </a>
-            <a href={`/api/reports/cash/pdf?${pdfParams.toString()}`} className="secondary-action h-11 w-full justify-center xl:w-auto">
-              <Download className="h-4 w-4" aria-hidden />
-              PDF indir
-            </a>
+            <PdfDownloadButton
+              href={`/api/reports/cash/pdf?${pdfParams.toString()}`}
+              label="PDF indir"
+              className="w-full justify-center xl:w-auto"
+            />
           </div>
         </form>
       </section>

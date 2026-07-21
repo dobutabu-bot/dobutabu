@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, BarChart3, Download, FileText, Landmark, Repeat, Scale, SearchCheck, Sparkles } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Download, Landmark, Repeat, Scale, SearchCheck, Sparkles } from "lucide-react";
 import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
@@ -6,6 +6,7 @@ import { AmountText } from "@/components/amount-text";
 import { DataTable } from "@/components/data-table";
 import { DetailActivityLog } from "@/components/detail-activity-log";
 import { DetailBreadcrumb, DetailHero, DetailTabs } from "@/components/detail-shell";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
 import { getStatementAnalysis } from "@/lib/bank-analysis/analyze-statement";
@@ -62,10 +63,12 @@ export default async function BankStatementDetailPage({ params }: BankStatementD
               Orijinal Dosya
             </a>
           ) : null}
-          <a href={`/api/reports/bank-analysis/${bankImport.id}/pdf`} className="secondary-action min-h-11 px-4 text-sm leading-none">
-            <FileText className="h-4 w-4" aria-hidden />
-            PDF Analiz
-          </a>
+          <PdfDownloadButton
+            href={`/api/reports/bank-analysis/${bankImport.id}/pdf`}
+            label="PDF Analiz"
+            icon="file"
+            className="px-4 text-sm leading-none"
+          />
           <Link href={`/bank-statements/${bankImport.id}/analysis`} className="secondary-action min-h-11 px-4 text-sm leading-none">
             <BarChart3 className="h-4 w-4" aria-hidden />
             Son 12 Ay

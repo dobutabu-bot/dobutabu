@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { ChunkLoadRecovery } from "@/components/chunk-load-recovery";
 import { OfflineStatusBanner } from "@/components/offline-status-banner";
 import { PwaRegister } from "@/components/pwa-register";
 
@@ -47,6 +48,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr" data-privacy-mode="off">
+      <head>
+        <ChunkLoadRecovery />
+      </head>
       <body>
         <OfflineStatusBanner />
         {children}

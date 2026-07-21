@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, FileText, Filter, Landmark, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, Filter, Landmark, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "@/components/app-link";
 
 import { AmountText } from "@/components/amount-text";
@@ -6,6 +6,7 @@ import { BankRowActions } from "@/components/bank/bank-row-actions";
 import { DataTable } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { LazyBankAnalysisCharts } from "@/components/lazy-bank-analysis-charts";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { PrivacyAmount } from "@/components/privacy/privacy-mask";
 import { StatusBadge } from "@/components/status-badge";
 import type { getBankAnalysisScreenData } from "@/lib/bank-analysis/analyze-statement";
@@ -47,10 +48,12 @@ export function BankAnalysisScreen({ data, selectedImportId, page, searchParams 
               CSV
             </a>
             {pdfHref ? (
-              <a href={pdfHref} className="secondary-action min-h-11 border-white/15 bg-white/10 text-white hover:bg-white/15">
-                <FileText className="h-4 w-4" aria-hidden />
-                PDF
-              </a>
+              <PdfDownloadButton
+                href={pdfHref}
+                label="PDF"
+                tone="dark"
+                icon="file"
+              />
             ) : null}
           </div>
         </div>

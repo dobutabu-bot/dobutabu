@@ -1,0 +1,305 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - deployment-rescue
+      - "hotfix/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: "true"
+  PLAYWRIGHT_BASE_URL: http://127.0.0.1:3006
+  PLAYWRIGHT_USE_PROD_SERVER: "1"
+
+jobs:
+  secret-data-scan:
+    name: Secret and data scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Scan tracked files
+        run: node scripts/ci-secret-data-scan.mjs
+
+  build:
+    name: Typecheck, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Prepare isolated CI environment
+        run: bash scripts/ci-prepare-test-env.sh
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Verify build artifact
+        run: node scripts/verify-build-artifact.mjs
+      - name: Upload production build
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-production-build
+          path: .next
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+
+  unit-integration:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/ci-prepare-test-env.sh
+      - run: npx prisma generate
+      - name: Deploy migrations to isolated CI database
+        run: npx prisma migrate deploy
+      - name: Initialize isolated CI fixtures
+        run: npx prisma db seed
+      - name: Run complete unit and integration suite
+        run: npm run test
+
+  pdf-tests:
+    name: PDF unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/ci-prepare-test-env.sh
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - name: Run PDF unit and integration suite
+        run: >
+          node
+          --experimental-strip-types
+          --experimental-transform-types
+          --import ./tests/register-ts-paths.mjs
+          --test tests/pdf-qa.test.ts
+
+  playwright-browsers:
+    name: Playwright ${{ matrix.label }}
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: Chromium, browser: chromium, project: chromium-desktop }
+          - { label: Firefox, browser: firefox, project: firefox-desktop }
+          - { label: WebKit, browser: webkit, project: webkit-desktop }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/ci-prepare-test-env.sh
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-production-build
+          path: .next
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run browser release gates
+        run: npx playwright test tests/e2e/v3-release-gates.spec.ts --project=${{ matrix.project }} --workers=1
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-${{ matrix.project }}-failure
+          path: |
+            test-results
+            playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  pdf-download-e2e:
+    name: PDF download ${{ matrix.label }}
+    needs: [build, pdf-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: Chromium, browser: chromium, project: chromium-desktop }
+          - { label: Firefox, browser: firefox, project: firefox-desktop }
+          - { label: WebKit, browser: webkit, project: webkit-desktop }
+          - { label: Android-Chromium, browser: chromium, project: android }
+          - { label: iPhone-WebKit, browser: webkit, project: iphone }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/ci-prepare-test-env.sh
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-production-build
+          path: .next
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Verify real PDF downloads
+        run: npx playwright test tests/e2e/pdf-download-gate.spec.ts --project=${{ matrix.project }} --workers=1
+      - name: Upload PDF failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-${{ matrix.project }}-failure
+          path: |
+            test-results
+            playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  critical-route-smoke:
+    name: Critical routes ${{ matrix.label }}
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: Chromium, browser: chromium, project: chromium-desktop }
+          - { label: Firefox, browser: firefox, project: firefox-desktop }
+          - { label: WebKit, browser: webkit, project: webkit-desktop }
+          - { label: Android, browser: chromium, project: android }
+          - { label: iPhone, browser: webkit, project: iphone }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/ci-prepare-test-env.sh
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-production-build
+          path: .next
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run full critical-route smoke
+        run: npx playwright test tests/e2e/v2-cross-browser.spec.ts --project=${{ matrix.project }} --workers=1
+      - name: Upload route failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: routes-${{ matrix.project }}-failure
+          path: |
+            test-results
+            playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build-artifact:
+    name: Build artifact
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-production-build
+          path: .next
+      - run: node scripts/verify-build-artifact.mjs
+
+  quality-gates:
+    name: Required quality gate
+    if: always()
+    needs:
+      - secret-data-scan
+      - build
+      - unit-integration
+      - pdf-tests
+      - playwright-browsers
+      - pdf-download-e2e
+      - critical-route-smoke
+      - build-artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every quality gate
+        env:
+          SECRET_DATA_SCAN: ${{ needs.secret-data-scan.result }}
+          BUILD: ${{ needs.build.result }}
+          UNIT_INTEGRATION: ${{ needs.unit-integration.result }}
+          PDF_TESTS: ${{ needs.pdf-tests.result }}
+          PLAYWRIGHT_BROWSERS: ${{ needs.playwright-browsers.result }}
+          PDF_DOWNLOAD_E2E: ${{ needs.pdf-download-e2e.result }}
+          CRITICAL_ROUTE_SMOKE: ${{ needs.critical-route-smoke.result }}
+          BUILD_ARTIFACT: ${{ needs.build-artifact.result }}
+        run: |
+          printf '%-28s %s\n' \
+            secret-data-scan "$SECRET_DATA_SCAN" \
+            build "$BUILD" \
+            unit-integration "$UNIT_INTEGRATION" \
+            pdf-tests "$PDF_TESTS" \
+            playwright-browsers "$PLAYWRIGHT_BROWSERS" \
+            pdf-download-e2e "$PDF_DOWNLOAD_E2E" \
+            critical-route-smoke "$CRITICAL_ROUTE_SMOKE" \
+            build-artifact "$BUILD_ARTIFACT"
+          for result in "$SECRET_DATA_SCAN" "$BUILD" "$UNIT_INTEGRATION" "$PDF_TESTS" "$PLAYWRIGHT_BROWSERS" "$PDF_DOWNLOAD_E2E" "$CRITICAL_ROUTE_SMOKE" "$BUILD_ARTIFACT"; do
+            if [ "$result" != success ]; then
+              echo "BLOCKED: En az bir zorunlu kalite kapisi basarisiz veya tamamlanmadi." >&2
+              exit 1
+            fi
+          done
+          echo "PASS: Tum zorunlu kalite kapilari basarili."

@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { Banknote, Download, Eye, FilePlus2, Filter } from "lucide-react";
+import { Banknote, Eye, FilePlus2, Filter } from "lucide-react";
 import Link from "@/components/app-link";
 
 import { ConfirmActionButton } from "@/components/confirm-action-button";
@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { RecordCreateDrawerButton } from "@/components/record-create-drawer-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
@@ -246,17 +247,14 @@ export default async function AdvancesPage({ searchParams }: AdvancesPageProps) 
   const pdfHref = createAdvancePdfHref(filters);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="advances-content-ready">
       <PageHeader
         eyebrow="Finans"
         title="Masraf Avansları"
         description="Müvekkil ve dosya bazlı alınan ve harcanan masraf avanslarının takibi."
         actions={
           <>
-            <Link href={pdfHref} className="secondary-action min-h-11 justify-center px-4">
-              <Download className="h-4 w-4" aria-hidden />
-              PDF Rapor
-            </Link>
+            <PdfDownloadButton href={pdfHref} label="PDF Rapor" className="justify-center px-4" />
             <RecordCreateDrawerButton
               label="Avans Hareketi Ekle"
               title="Avans Hareketi Ekle"

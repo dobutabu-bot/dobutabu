@@ -16,6 +16,7 @@ import type { EntityFormField } from "@/components/entity-form";
 import { CategoryPieChart, FinanceChartPanel, HorizontalBarChart } from "@/components/finance-charts";
 import { MetricCard } from "@/components/metric-card";
 import { Pagination } from "@/components/pagination";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { PremiumCard } from "@/components/premium-card";
 import { PrivacyAmount } from "@/components/privacy/privacy-mask";
 import { RecordCreateButton } from "@/components/record-create-button";
@@ -31,7 +32,7 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
   const assetFields = assetAccountFields(data.cashAccountOptions);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="capital-content-ready">
       <section className="surface-dark overflow-hidden p-5">
         <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -150,10 +151,11 @@ export function CapitalCenterScreen({ data }: { data: CapitalCenterData }) {
             <Download className="h-4 w-4" aria-hidden />
             Değerleme CSV
           </a>
-          <a href="/api/reports/capital/pdf" className="secondary-action min-h-11 px-4 text-sm leading-none">
-            <Download className="h-4 w-4" aria-hidden />
-            PDF
-          </a>
+          <PdfDownloadButton
+            href="/api/reports/capital/pdf"
+            label="PDF"
+            className="px-4 text-sm leading-none"
+          />
         </div>
       </section>
 

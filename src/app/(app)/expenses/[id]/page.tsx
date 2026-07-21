@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, Download, ReceiptText, Scale, WalletCards } from "lucide-react";
+import { BriefcaseBusiness, ReceiptText, Scale, WalletCards } from "lucide-react";
 import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
@@ -7,6 +7,7 @@ import { DetailActivityLog } from "@/components/detail-activity-log";
 import { DetailBreadcrumb, DetailHero, DetailInfoRow, DetailSection, DetailTabs } from "@/components/detail-shell";
 import { DocumentLinksSection } from "@/components/document-links-section";
 import { MetricCard } from "@/components/metric-card";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { RecordEditButton } from "@/components/record-edit-button";
 import { StatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
@@ -95,10 +96,7 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
         status={<StatusBadge tone={expense.isClientExpense ? "amber" : "neutral"}>{expense.isClientExpense ? "Müvekkile yansıtılabilir" : "Genel/operasyonel gider"}</StatusBadge>}
         actions={
           <>
-            <a href={`/api/reports/expenses/${expense.id}/pdf`} className="secondary-action">
-              <Download className="h-4 w-4" aria-hidden />
-              PDF indir
-            </a>
+            <PdfDownloadButton href={`/api/reports/expenses/${expense.id}/pdf`} label="PDF indir" />
             <RecordEditButton
               title="Gider Düzenle"
               endpoint={`/api/expenses/${expense.id}`}

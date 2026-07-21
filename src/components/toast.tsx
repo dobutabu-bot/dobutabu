@@ -28,6 +28,7 @@ export function queueToast(message: string) {
 
 export function ToastViewport() {
   const [message, setMessage] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function ToastViewport() {
     }
 
     window.addEventListener(toastEventName, onToast);
+    setReady(true);
 
     return () => {
       clearToastTimer();
@@ -65,12 +67,13 @@ export function ToastViewport() {
   }, []);
 
   if (!message) {
-    return null;
+    return <span className="hidden" data-toast-ready={ready ? "true" : "false"} aria-hidden />;
   }
 
   return (
     <div
       className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[70] flex justify-center lg:bottom-5 lg:left-auto lg:right-5 lg:justify-end"
+      data-toast-ready={ready ? "true" : "false"}
       role="status"
       aria-live="polite"
     >
