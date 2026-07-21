@@ -109,38 +109,37 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-test("12 PDF türü gerçek kullanıcı tıklamasıyla indirilir ve ayrıştırılır", async ({ page }) => {
-  const consoleErrors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("pageerror", (error) => consoleErrors.push(error.message));
+const downloadTargets = [
+  { name: "Aylık finans", page: () => "/reports", label: "Aylık PDF" },
+  { name: "Kasa", page: () => "/reports", label: "Kasa PDF" },
+  { name: "Belge", page: () => "/reports", label: "Belge PDF" },
+  { name: "Banka hareketleri", page: () => "/reports", label: "Banka PDF" },
+  { name: "Mutabakat", page: () => "/reports", label: "Mutabakat PDF" },
+  { name: "Sermaye", page: () => "/reports", label: "Sermaye PDF" },
+  { name: "Avans", page: () => "/advances", label: "PDF Rapor" },
+  { name: "Müvekkil cari", page: () => `/clients/${fixture.clientId}`, label: "PDF indir" },
+  { name: "Dosya finans", page: () => `/cases/${fixture.caseFileId}`, label: "PDF indir" },
+  { name: "Tahsilat", page: () => `/collections/${fixture.incomeId}`, label: "PDF indir" },
+  { name: "Gider", page: () => `/expenses/${fixture.expenseId}`, label: "PDF indir" },
+  { name: "Banka analizi", page: () => `/bank-statements/${fixture.bankImportId}`, label: "PDF Analiz" }
+] as const;
 
-  await login(page);
+for (const target of downloadTargets) {
+  test(`${target.name} PDF gerçek kullanıcı tıklamasıyla indirilir ve ayrıştırılır`, async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-  const downloads = [
-    { page: "/reports", label: "Aylık PDF" },
-    { page: "/reports", label: "Kasa PDF" },
-    { page: "/reports", label: "Belge PDF" },
-    { page: "/reports", label: "Banka PDF" },
-    { page: "/reports", label: "Mutabakat PDF" },
-    { page: "/reports", label: "Sermaye PDF" },
-    { page: "/advances", label: "PDF Rapor" },
-    { page: `/clients/${fixture.clientId}`, label: "PDF indir" },
-    { page: `/cases/${fixture.caseFileId}`, label: "PDF indir" },
-    { page: `/collections/${fixture.incomeId}`, label: "PDF indir" },
-    { page: `/expenses/${fixture.expenseId}`, label: "PDF indir" },
-    { page: `/bank-statements/${fixture.bankImportId}`, label: "PDF Analiz" }
-  ];
-
-  for (const target of downloads) {
-    await page.goto(target.page);
+    await login(page);
+    await page.goto(target.page());
     await expect(page).not.toHaveURL(/\/login/);
     await expectRealPdfDownload(page, target.label);
-  }
 
-  expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
-});
+    expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
+  });
+}
 
 async function login(page: Page) {
   await page.goto("/login");
