@@ -1,0 +1,70 @@
+name: V5.0.1 Production Browser Acceptance
+
+on:
+  push:
+    branches:
+      - codex/v501-production-browser-matrix
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v501-production-browser-acceptance
+  cancel-in-progress: false
+
+jobs:
+  production-browser-matrix:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - label: Chromium desktop
+            browser: chromium
+            project: chromium-desktop
+          - label: Firefox desktop
+            browser: firefox
+            project: firefox-desktop
+          - label: WebKit desktop
+            browser: webkit
+            project: webkit-desktop
+          - label: iPhone WebKit
+            browser: webkit
+            project: iphone
+          - label: Android Chromium
+            browser: chromium
+            project: android
+    steps:
+      - name: Checkout isolated QA branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Install ${{ matrix.label }} engine
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run real production PDF matrix
+        run: >
+          npx playwright test
+          -c playwright.production-browser-matrix.temp.config.ts
+          --project=${{ matrix.project }}
+          --workers=1
+
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-browser-${{ matrix.project }}
+          path: artifacts/production-browser-matrix
+          if-no-files-found: warn
+          retention-days: 14
