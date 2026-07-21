@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { chromium, expect, type Page } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://dobutabu-production.up.railway.app";
@@ -10,6 +10,7 @@ const marker = `PDF-SMOKE-TEST-BROWSER-MATRIX-${Date.now()}`;
 const statePath = "artifacts/production-browser-matrix/state.json";
 
 export default async function globalSetup() {
+  await mkdir("artifacts/production-browser-matrix", { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL });
   const state = {
