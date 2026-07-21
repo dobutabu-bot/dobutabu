@@ -5,6 +5,8 @@ import { expect, test, type Locator, type Page, type Request } from "@playwright
 
 const email = process.env.ADMIN_EMAIL ?? "avukat@example.com";
 const password = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://dobutabu-production.up.railway.app";
+const sessionToken = process.env.PRODUCTION_SESSION_TOKEN;
 const mobileProjects = new Set(["iphone", "android"]);
 
 type State = {
@@ -137,6 +139,22 @@ async function parsePdf(bytes: Buffer, surface: string, title?: string) {
 }
 
 async function login(page: Page) {
+  if (sessionToken) {
+    await page.context().addCookies([
+      {
+        name: "hukuk_finans_session",
+        value: sessionToken,
+        url: baseURL,
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax"
+      }
+    ]);
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await waitForAppContent(page);
+    return;
+  }
+
   await page.goto("/login");
   await page.getByLabel("E-posta").fill(email);
   await page.getByLabel("Şifre").fill(password);
