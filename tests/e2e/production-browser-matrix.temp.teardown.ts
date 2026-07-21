@@ -6,6 +6,7 @@ import { chromium, expect, type Page } from "@playwright/test";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://dobutabu-production.up.railway.app";
 const email = process.env.ADMIN_EMAIL ?? "avukat@example.com";
 const password = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
+const sessionToken = process.env.PRODUCTION_SESSION_TOKEN;
 const statePath = "artifacts/production-browser-matrix/state.json";
 
 export default async function globalTeardown() {
@@ -55,6 +56,22 @@ async function confirmAction(page: Page, triggerName: string, dialogName: string
 }
 
 async function login(page: Page) {
+  if (sessionToken) {
+    await page.context().addCookies([
+      {
+        name: "hukuk_finans_session",
+        value: sessionToken,
+        url: baseURL,
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax"
+      }
+    ]);
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await waitForAppContent(page);
+    return;
+  }
+
   await page.goto("/login");
   await page.getByLabel("E-posta").fill(email);
   await page.getByLabel("Şifre").fill(password);
