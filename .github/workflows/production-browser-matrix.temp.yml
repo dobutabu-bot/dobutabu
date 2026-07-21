@@ -17,6 +17,9 @@ jobs:
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
     strategy:
       fail-fast: false
       max-parallel: 1
