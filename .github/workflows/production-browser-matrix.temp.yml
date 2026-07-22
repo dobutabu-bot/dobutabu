@@ -1,5 +1,7 @@
 name: V5.0.1 Production Browser Acceptance
 
+# Session-gated production acceptance rerun: 2026-07-22T13:50Z
+
 on:
   push:
     branches:
