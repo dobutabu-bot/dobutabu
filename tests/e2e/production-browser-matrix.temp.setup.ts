@@ -175,7 +175,7 @@ async function optionalDetailHref(page: Page, path: string, pattern: RegExp) {
   await expect(trigger).toHaveAttribute("data-action-menu-ready", "true");
   await trigger.click();
   const detail = page.getByRole("menu").getByRole("link", { name: "Detay", exact: true });
-  if (await detail.count() === 0) return null;
+  await expect(detail).toBeVisible();
   const href = await detail.getAttribute("href");
   return href && pattern.test(href) ? href : null;
 }
