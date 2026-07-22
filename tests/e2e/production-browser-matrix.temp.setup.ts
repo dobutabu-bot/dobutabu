@@ -90,7 +90,7 @@ async function login(page: Page) {
         sameSite: "Lax"
       }
     ]);
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.goto("/dashboard", { waitUntil: "load" });
     await waitForAppContent(page);
     return;
   }
