@@ -7,6 +7,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://dobutabu-production.
 const email = process.env.ADMIN_EMAIL ?? "avukat@example.com";
 const password = process.env.ADMIN_PASSWORD ?? "DemoAvukat2026!";
 const sessionToken = process.env.PRODUCTION_SESSION_TOKEN;
+// Each serialized browser job owns and soft-deletes its marked production QA fixtures.
 const marker = `PDF-SMOKE-TEST-BROWSER-MATRIX-${Date.now()}`;
 const statePath = "artifacts/production-browser-matrix/state.json";
 
