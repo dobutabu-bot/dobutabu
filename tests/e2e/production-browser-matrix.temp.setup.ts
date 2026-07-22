@@ -61,7 +61,7 @@ export default async function globalSetup() {
       const dialog = page.getByRole("dialog", { name: "Tahsilat Ekle" });
       await expect(dialog).toBeVisible();
       await dialog.getByLabel("Müvekkil", { exact: true }).selectOption(clientId);
-      await dialog.getByLabel("Tutar", { exact: true }).fill("1.00");
+      await dialog.getByRole("spinbutton", { name: "Tutar zorunlu alan", exact: true }).fill("1.00");
       await dialog.getByLabel("Açıklama", { exact: true }).fill(`${marker} Tahsilat`);
       const advanced = dialog.locator("details");
       await advanced.locator("summary").click();
@@ -82,8 +82,8 @@ export default async function globalSetup() {
       await waitForAppContent(page);
       const dialog = page.getByRole("dialog", { name: "Gider Ekle" });
       await expect(dialog).toBeVisible();
-      await dialog.getByLabel("Tutar", { exact: true }).fill("1.00");
-      await dialog.getByLabel("Kategori", { exact: true }).selectOption({ index: 1 });
+      await dialog.getByRole("spinbutton", { name: "Tutar zorunlu alan", exact: true }).fill("1.00");
+      await dialog.getByRole("combobox", { name: "Kategori zorunlu alan", exact: true }).selectOption({ index: 1 });
       await dialog.getByLabel("Açıklama", { exact: true }).fill(`${marker} Gider`);
       const advanced = dialog.locator("details");
       await advanced.locator("summary").click();
