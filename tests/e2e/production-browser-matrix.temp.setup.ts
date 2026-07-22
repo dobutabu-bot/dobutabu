@@ -17,7 +17,9 @@ export default async function globalSetup() {
   const state = {
     marker,
     createdCase: false,
+    createdCollection: false,
     createdDocument: false,
+    createdExpense: false,
     clientHref: "",
     caseHref: "",
     collectionHref: "",
@@ -28,8 +30,6 @@ export default async function globalSetup() {
   try {
     await login(page);
     state.clientHref = await requireDetailHref(page, "/clients", /^\/clients\/[^/?#]+$/);
-    state.collectionHref = await requireDetailHref(page, "/collections", /^\/collections\/[^/?#]+$/);
-    state.expenseHref = await requireDetailHref(page, "/expenses", /^\/expenses\/[^/?#]+$/);
 
     state.caseHref = await optionalDetailHref(page, "/cases", /^\/cases\/[^/?#]+$/) ?? "";
     if (!state.caseHref) {
@@ -48,6 +48,54 @@ export default async function globalSetup() {
         /^\/cases\/[^/?#]+$/
       );
       state.createdCase = true;
+    }
+
+    const clientId = state.clientHref.split("/").pop() ?? "";
+    const caseId = state.caseHref.split("/").pop() ?? "";
+
+    state.collectionHref = await optionalDetailHref(page, "/collections", /^\/collections\/[^/?#]+$/) ?? "";
+    if (!state.collectionHref) {
+      await page.goto("/collections?create=1", { waitUntil: "domcontentloaded" });
+      await waitForAppContent(page);
+      const dialog = page.getByRole("dialog", { name: "Tahsilat Ekle" });
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel("Müvekkil", { exact: true }).selectOption(clientId);
+      await dialog.getByLabel("Tutar", { exact: true }).fill("1.00");
+      await dialog.getByLabel("Açıklama", { exact: true }).fill(`${marker} Tahsilat`);
+      const advanced = dialog.locator("details");
+      await advanced.locator("summary").click();
+      await dialog.getByLabel("Dosya", { exact: true }).selectOption(caseId);
+      await dialog.getByRole("button", { name: "Kaydet", exact: true }).click();
+      await expect(dialog).toBeHidden();
+      state.collectionHref = await requireDetailHref(
+        page,
+        `/collections?q=${encodeURIComponent(marker)}`,
+        /^\/collections\/[^/?#]+$/
+      );
+      state.createdCollection = true;
+    }
+
+    state.expenseHref = await optionalDetailHref(page, "/expenses", /^\/expenses\/[^/?#]+$/) ?? "";
+    if (!state.expenseHref) {
+      await page.goto("/expenses?create=1", { waitUntil: "domcontentloaded" });
+      await waitForAppContent(page);
+      const dialog = page.getByRole("dialog", { name: "Gider Ekle" });
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel("Tutar", { exact: true }).fill("1.00");
+      await dialog.getByLabel("Kategori", { exact: true }).selectOption({ index: 1 });
+      await dialog.getByLabel("Açıklama", { exact: true }).fill(`${marker} Gider`);
+      const advanced = dialog.locator("details");
+      await advanced.locator("summary").click();
+      await dialog.getByLabel("Müvekkil", { exact: true }).selectOption(clientId);
+      await dialog.getByLabel("Dosya", { exact: true }).selectOption(caseId);
+      await dialog.getByRole("button", { name: "Kaydet", exact: true }).click();
+      await expect(dialog).toBeHidden();
+      state.expenseHref = await requireDetailHref(
+        page,
+        `/expenses?q=${encodeURIComponent(marker)}`,
+        /^\/expenses\/[^/?#]+$/
+      );
+      state.createdExpense = true;
     }
 
     await page.goto("/documents/new", { waitUntil: "domcontentloaded" });
