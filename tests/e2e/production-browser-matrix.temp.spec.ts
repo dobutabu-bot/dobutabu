@@ -52,7 +52,7 @@ test("production PDF yüzeyleri gerçek download, parse, action menu ve runtime 
   ];
 
   for (const target of targets) {
-    await page.goto(target.page, { waitUntil: "networkidle" });
+    await page.goto(target.page, { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
     const trigger = page.getByRole("button", { name: target.label, exact: true });
     await expect(trigger, `${target.surface}: PDF butonu`).toHaveCount(1);
@@ -60,7 +60,7 @@ test("production PDF yüzeyleri gerçek download, parse, action menu ve runtime 
     results.push(await downloadAndParse(page, trigger, target.route, target.surface, target.title));
   }
 
-  await page.goto("/clients", { waitUntil: "networkidle" });
+  await page.goto("/clients", { waitUntil: "domcontentloaded" });
   await waitForAppContent(page);
   const actionTrigger = page.getByRole("button", { name: "İşlemler" }).first();
   await expect(actionTrigger).toHaveAttribute("data-action-menu-ready", "true");
@@ -75,7 +75,7 @@ test("production PDF yüzeyleri gerçek download, parse, action menu ve runtime 
 
   const previewRoute = new RegExp(`${state.documentHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace("/documents/", "/api/documents/")}/preview`);
   const previewResponsePromise = page.waitForResponse((response) => previewRoute.test(new URL(response.url()).pathname));
-  await page.goto(state.documentHref, { waitUntil: "networkidle" });
+  await page.goto(state.documentHref, { waitUntil: "domcontentloaded" });
   await waitForAppContent(page);
   const previewResponse = await previewResponsePromise;
   const previewBytes = Buffer.from(await previewResponse.body());
@@ -150,7 +150,7 @@ async function login(page: Page) {
         sameSite: "Lax"
       }
     ]);
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
     return;
   }
