@@ -24,13 +24,13 @@ export default async function globalTeardown() {
   try {
     await login(page);
     if (state.createdDocument && state.documentHref) {
-      await page.goto(state.documentHref, { waitUntil: "networkidle" });
+      await page.goto(state.documentHref, { waitUntil: "domcontentloaded" });
       await waitForAppContent(page);
       await confirmAction(page, "Sil", "Belge silinsin mi?", "Onayla");
       cleanup.push("document:soft-deleted");
     }
     if (state.createdCase && state.caseHref) {
-      await page.goto(state.caseHref, { waitUntil: "networkidle" });
+      await page.goto(state.caseHref, { waitUntil: "domcontentloaded" });
       await waitForAppContent(page);
       await confirmAction(page, "Sil/Arşivle", "Dosya silinsin/arşivlensin mi?", "Sil/Arşivle");
       cleanup.push("case:soft-deleted");
@@ -67,7 +67,7 @@ async function login(page: Page) {
         sameSite: "Lax"
       }
     ]);
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
     return;
   }
