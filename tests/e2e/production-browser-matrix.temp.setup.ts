@@ -33,7 +33,7 @@ export default async function globalSetup() {
 
     state.caseHref = await optionalDetailHref(page, "/cases", /^\/cases\/[^/?#]+$/) ?? "";
     if (!state.caseHref) {
-      await page.goto("/cases?create=1", { waitUntil: "networkidle" });
+      await page.goto("/cases?create=1", { waitUntil: "domcontentloaded" });
       await waitForAppContent(page);
       const dialog = page.getByRole("dialog", { name: "Dosya Ekle" });
       await expect(dialog).toBeVisible();
@@ -50,7 +50,7 @@ export default async function globalSetup() {
       state.createdCase = true;
     }
 
-    await page.goto("/documents/new", { waitUntil: "networkidle" });
+    await page.goto("/documents/new", { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
     const fixtureBytes = await readFile("fixtures/bank-statements/pdf-fallback-ekstre.pdf");
     await page.locator('input[type="file"]').setInputFiles({
@@ -87,7 +87,7 @@ async function login(page: Page) {
         sameSite: "Lax"
       }
     ]);
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
     return;
   }
@@ -110,7 +110,7 @@ async function requireDetailHref(page: Page, path: string, pattern: RegExp) {
 }
 
 async function optionalDetailHref(page: Page, path: string, pattern: RegExp) {
-  await page.goto(path, { waitUntil: "networkidle" });
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   await waitForAppContent(page);
   const direct = await page.locator("main a[href]").evaluateAll(
     (links, source) => links.map((link) => link.getAttribute("href")).find((href) => href && new RegExp(source).test(href)) ?? null,
