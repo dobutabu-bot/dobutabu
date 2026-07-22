@@ -52,7 +52,10 @@ export default async function globalSetup() {
 
     await page.goto("/documents/new", { waitUntil: "domcontentloaded" });
     await waitForAppContent(page);
-    const fixtureBytes = Buffer.concat([\n      await readFile("fixtures/bank-statements/pdf-fallback-ekstre.pdf"),\n      Buffer.from(`\\n% ${marker}\\n`, "utf8")\n    ]);
+    const fixtureBytes = Buffer.concat([
+      await readFile("fixtures/bank-statements/pdf-fallback-ekstre.pdf"),
+      Buffer.from(`\n% ${marker}\n`, "utf8")
+    ]);
     await page.locator('input[type="file"]').setInputFiles({
       name: `${marker}.pdf`,
       mimeType: "application/pdf",
