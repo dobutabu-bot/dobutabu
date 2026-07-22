@@ -13,9 +13,13 @@ export default async function globalTeardown() {
   await mkdir("artifacts/production-browser-matrix", { recursive: true });
   const state = JSON.parse(await readFile(statePath, "utf8")) as {
     createdCase: boolean;
+    createdCollection: boolean;
     createdDocument: boolean;
+    createdExpense: boolean;
     caseHref: string;
+    collectionHref: string;
     documentHref: string;
+    expenseHref: string;
   };
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL });
@@ -28,6 +32,18 @@ export default async function globalTeardown() {
       await waitForAppContent(page);
       await confirmAction(page, "Sil", "Belge silinsin mi?", "Onayla");
       cleanup.push("document:soft-deleted");
+    }
+    if (state.createdExpense && state.expenseHref) {
+      await page.goto(state.expenseHref, { waitUntil: "domcontentloaded" });
+      await waitForAppContent(page);
+      await confirmAction(page, "Sil", "Gider silinsin mi?", "Sil");
+      cleanup.push("expense:soft-deleted");
+    }
+    if (state.createdCollection && state.collectionHref) {
+      await page.goto(state.collectionHref, { waitUntil: "domcontentloaded" });
+      await waitForAppContent(page);
+      await confirmAction(page, "Sil", "Tahsilat silinsin mi?", "Sil");
+      cleanup.push("collection:soft-deleted");
     }
     if (state.createdCase && state.caseHref) {
       await page.goto(state.caseHref, { waitUntil: "domcontentloaded" });
@@ -50,7 +66,7 @@ async function confirmAction(page: Page, triggerName: string, dialogName: string
   const dialog = page.getByRole("dialog", { name: dialogName });
   await expect(dialog).toBeVisible();
   await Promise.all([
-    page.waitForURL((url) => !/\/(documents|cases)\/[^/]+$/.test(url.pathname)),
+    page.waitForURL((url) => !/\/(documents|cases|collections|expenses)\/[^/]+$/.test(url.pathname)),
     dialog.getByRole("button", { name: confirmName, exact: true }).click()
   ]);
 }
