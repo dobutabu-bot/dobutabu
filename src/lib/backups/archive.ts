@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -69,7 +70,7 @@ export async function removeBackupWorkspace(directory: string) {
   const workspaceStat = await lstat(directory).catch(() => null);
   if (!workspaceStat) return;
 
-  const temporaryRoot = path.resolve(process.env.BACKUP_TEMP_DIR ?? "/tmp");
+  const temporaryRoot = path.resolve(process.env.BACKUP_TEMP_DIR ?? os.tmpdir());
   const resolvedDirectory = path.resolve(directory);
 
   if (!resolvedDirectory.startsWith(`${temporaryRoot}${path.sep}`)) {
