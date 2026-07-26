@@ -71,7 +71,7 @@ export function GlobalQuickAdd({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <>
-      <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-40 lg:bottom-6 lg:right-7">
+      <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-40 lg:static">
         <button type="button" className="flex h-14 min-w-14 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-semibold text-white shadow-[0_20px_45px_rgba(15,23,42,0.30)] transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/25 active:translate-y-0 active:scale-95" aria-label="Yeni kayıt ekle" aria-expanded={open} data-testid="global-new-button" onClick={() => onOpenChange(true)}>
           <Plus className="h-5 w-5" aria-hidden /><span className="hidden sm:inline">Yeni</span>
         </button>
