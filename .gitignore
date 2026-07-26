@@ -8,7 +8,7 @@ dist
 !.env.railway.example
 storage
 storage/**
-backups/
+/backups/
 *.db
 *.db-journal
 *.db-wal
@@ -28,7 +28,7 @@ work/
 .local-home/
 START_LOCAL.command
 
-backups/
+/backups/
 storage/
 *.db
 *.db-journal

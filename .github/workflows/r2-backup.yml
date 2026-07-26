@@ -1,0 +1,101 @@
+name: Production R2 Backup
+
+on:
+  schedule:
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Backup mode
+        required: true
+        default: daily
+        type: choice
+        options:
+          - daily
+          - baseline
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-r2-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Trigger encrypted production backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      BACKUP_URL: ${{ secrets.PRODUCTION_BACKUP_URL }}
+      BACKUP_HMAC_SECRET: ${{ secrets.PRODUCTION_BACKUP_HMAC_SECRET }}
+      BACKUP_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'daily' }}
+    steps:
+      - name: Validate scheduler configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_URL"
+          test -n "$BACKUP_HMAC_SECRET"
+          case "$BACKUP_URL" in
+            https://*/api/internal/backup) ;;
+            *) echo "BACKUP_URL must be an HTTPS internal backup endpoint." >&2; exit 1 ;;
+          esac
+          case "$BACKUP_MODE" in
+            daily|baseline) ;;
+            *) echo "Invalid backup mode." >&2; exit 1 ;;
+          esac
+
+      - name: Trigger and verify backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          for attempt in 1 2 3; do
+            timestamp="$(date +%s)"
+            signature="$(
+              TIMESTAMP="$timestamp" node -e '
+                const { createHmac } = require("node:crypto");
+                const payload = `${process.env.TIMESTAMP}\nPOST\n/api/internal/backup\n${process.env.BACKUP_MODE}`;
+                process.stdout.write(createHmac("sha256", process.env.BACKUP_HMAC_SECRET).update(payload).digest("hex"));
+              '
+            )"
+
+            status="$(
+              curl --silent --show-error \
+                --connect-timeout 15 \
+                --max-time 600 \
+                --output "$response_file" \
+                --write-out "%{http_code}" \
+                --request POST \
+                --header "Content-Type: application/json" \
+                --header "X-Backup-Timestamp: $timestamp" \
+                --header "X-Backup-Signature: $signature" \
+                --header "X-Backup-Mode: $BACKUP_MODE" \
+                "$BACKUP_URL" || true
+            )"
+
+            if [ "$status" = "200" ] && node -e '
+              const fs = require("node:fs");
+              const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              if (
+                value.ok !== true ||
+                value.verification?.databaseIntegrity !== "ok" ||
+                value.verification?.recordCountsMatch !== true ||
+                value.verification?.documentManifestMatch !== true
+              ) process.exit(1);
+            ' "$response_file"; then
+              echo "Encrypted R2 backup and isolated verification passed."
+              exit 0
+            fi
+
+            echo "Backup attempt $attempt failed with HTTP ${status:-000}." >&2
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+
+          echo "R2 backup failed after three attempts." >&2
+          exit 1
