@@ -14,7 +14,7 @@ import {
   signBackupRequest,
   verifyBackupRequest
 } from "@/lib/backups/auth";
-import { createBackupArchive } from "@/lib/backups/archive";
+import { createBackupArchive, removeBackupWorkspace } from "@/lib/backups/archive";
 import { decryptBackupFile, encryptBackupFile, sha256File } from "@/lib/backups/crypto";
 import {
   buildDocumentManifest,
@@ -205,4 +205,14 @@ test("AES-256-GCM değiştirilmiş şifreli yedeği reddeder", async () => {
       key: encryptionKey
     })
   );
+});
+
+test("yedek çalışma alanı işletim sisteminin geçici dizininden güvenle temizlenir", async () => {
+  const cleanupTarget = path.join(os.tmpdir(), `r2-backup-cleanup-${Date.now()}-${process.pid}`);
+  await mkdir(cleanupTarget, { recursive: true });
+  await writeFile(path.join(cleanupTarget, "temporary.txt"), "temporary");
+
+  await removeBackupWorkspace(cleanupTarget);
+
+  assert.equal(await stat(cleanupTarget).catch(() => null), null);
 });
