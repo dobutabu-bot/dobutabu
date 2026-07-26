@@ -25,7 +25,7 @@ ENV PDF_FONT_BOLD_PATH=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf
 
 # PDFKit needs a Unicode-capable TTF at runtime. Alpine does not ship fonts in
 # the base image, so generated reports would fail before writing a response.
-RUN apk add --no-cache openssl font-dejavu
+RUN apk add --no-cache openssl font-dejavu sqlite
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 COPY --from=builder /app/package.json ./package.json

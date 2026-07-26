@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/install",
   "/api/health",
   "/api/auth/login",
+  "/api/internal/backup",
   "/app.webmanifest",
   "/manifest.json",
   "/icon.svg",
