@@ -171,6 +171,7 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
                 <GlobalSearch />
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <GlobalQuickAdd open={quickActionsOpen} onOpenChange={setQuickActionsOpen} />
                 <PrivacyModeToggle />
                 <NotificationCenter items={liveReminderNotifications} />
                 <UserMenu user={user} />
@@ -214,8 +215,6 @@ export function AppShell({ children, user, firmName, reminderNotifications, brow
           </div>
         </div>
       ) : null}
-
-      <GlobalQuickAdd open={quickActionsOpen} onOpenChange={setQuickActionsOpen} />
 
       <MobileNavigation aria-label="Mobil alt navigasyon" aria-hidden={mobileMenuOpen ? true : undefined}>
         {PRIMARY_MOBILE_NAV_ITEMS.map((item) => {
